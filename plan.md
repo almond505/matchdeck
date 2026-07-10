@@ -14,25 +14,27 @@ The original plan begins below. This status section is the current source of tru
 - The room has a casino-table UI: green felt, face-down playing-card backs while writing, a GSAP fold-to-table motion, and confetti at reveal.
 - Reveal now keeps every submitted card face-up on the main table and renders matching cards again in readable, responsive match piles.
 - Group UI no longer uses the flattening 3D rotation that compressed match piles into thin strips.
+- Room API responses redact card and normalized text until reveal, so a client cannot read folded ideas from the response payload.
+- Room responses omit host and participant session IDs. The client receives only viewer-specific participant and host metadata.
+- Server-side mutation validation rejects malformed room codes, invalid room states, and oversized names, prompts, and card text without limiting the number of cards a participant can submit.
 - Supabase SQL schema and client setup are present for future persistence.
-- Automated checks exist for grouping and multi-card storage behavior. `npm run test`, `npm run check`, and a production build have passed during implementation.
+- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, and input validation. `npm run test`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
 
 - Runtime data currently lives in a small in-memory Next API store, not Supabase. Rooms reset when the server restarts.
 - Clients poll the room API every 1.2 seconds; there are no realtime subscriptions yet.
-- The UI hides card text before reveal, but the current API response still includes card text. This is not secure enough for genuinely secret brainstorming.
-- The local Git repository was initialized with an initial baseline commit. Later UI work is currently uncommitted because staging was blocked by the execution environment's usage limit.
+- The API exposes a deliberately limited public room view. Browser session IDs remain bearer credentials held in local storage and sent only with the caller's request.
+- The local Git repository contains atomic commits for the casino-table interface, card redaction, input validation, and private session projection.
 
 ### Remaining Backlog
 
 #### Must Do Before Real Multi-Person Use
 
-1. Redact unrevealed card text from API responses for non-owners, then add API tests proving it cannot be read before reveal.
-2. Move the in-memory room store to Supabase/Postgres and add Supabase Realtime so room updates do not rely on polling.
-3. Add expiry cleanup and enforce server-side validation/rate limits for room, prompt, name, and card input.
-4. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
-5. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
+1. Move the in-memory room store to Supabase/Postgres and add Supabase Realtime so room updates do not rely on polling.
+2. Add expiry cleanup and request rate limits; current validation is server-side, but there is no abuse protection yet.
+3. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
+4. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
 #### Next UX Improvements
 
