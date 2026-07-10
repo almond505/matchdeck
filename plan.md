@@ -14,6 +14,7 @@ The original plan begins below. This status section is the current source of tru
 - The room has a casino-table UI: green felt, face-down playing-card backs while writing, a GSAP fold-to-table motion, and confetti at reveal.
 - Reveal now keeps every submitted card face-up on the main table and renders matching cards again in readable, responsive match piles.
 - Group UI no longer uses the flattening 3D rotation that compressed match piles into thin strips.
+- Each participant receives a stable rank-and-suit identity (for example, `A♣` or `K♠`), shown in the corners of every one of their revealed cards instead of an avatar code.
 - Room API responses redact card and normalized text until reveal, so a client cannot read folded ideas from the response payload.
 - Room responses omit host and participant session IDs. The client receives only viewer-specific participant and host metadata.
 - Server-side mutation validation rejects malformed room codes, invalid room states, and oversized names, prompts, and card text without limiting the number of cards a participant can submit.
