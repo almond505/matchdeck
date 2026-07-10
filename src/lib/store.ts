@@ -18,6 +18,7 @@ function publicRoom(room: Room): Room {
 }
 
 export function createRoom(hostSessionId: string) {
+  pruneExpiredRooms();
   let code = roomCode();
   for (let i = 0; rooms.has(code) && i < 20; i++) code = roomCode();
   if (rooms.has(code)) throw new Error("Could not create a fresh room code.");
@@ -41,6 +42,7 @@ export function createRoom(hostSessionId: string) {
 }
 
 export function getRoom(code: string) {
+  pruneExpiredRooms();
   const room = rooms.get(code.toUpperCase());
   return room ? publicRoom(room) : null;
 }
@@ -103,10 +105,17 @@ export function submitCard(code: string, sessionId: string, text: string) {
 }
 
 function mustRoom(code: string) {
+  pruneExpiredRooms();
   const room = rooms.get(code.toUpperCase());
   if (!room) throw new Error("Room not found.");
-  if (Date.parse(room.expiresAt) < Date.now()) throw new Error("Room expired.");
   return room;
+}
+
+function pruneExpiredRooms() {
+  const currentTime = Date.now();
+  for (const [code, room] of rooms) {
+    if (Date.parse(room.expiresAt) <= currentTime) rooms.delete(code);
+  }
 }
 
 function mustHost(code: string, sessionId: string) {
