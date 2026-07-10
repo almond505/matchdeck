@@ -9,14 +9,34 @@ const updated = submitCard(room.roomCode, "host-unlimited", "Sushi");
 
 assert.equal(updated.cards.length, 2);
 
-const originalNow = Date.now;
-try {
-  Date.now = () => 0;
-  const expired = createRoom("host-expired");
-  Date.now = originalNow;
-  assert.equal(getRoom(expired.roomCode), null);
-} finally {
-  Date.now = originalNow;
+{
+  const originalNow = Date.now;
+  const rateLimitStart = originalNow();
+  try {
+    Date.now = () => rateLimitStart;
+    const burstRoom = createRoom("host-burst");
+    joinRoom(burstRoom.roomCode, "host-burst", "Burst host");
+    patchRoom(burstRoom.roomCode, "host-burst", { prompt: "Dinner?", status: "writing" });
+    for (let index = 0; index < 12; index += 1) submitCard(burstRoom.roomCode, "host-burst", `Idea ${index}`);
+    assert.throws(() => submitCard(burstRoom.roomCode, "host-burst", "One more"), /Too many cards too quickly/);
+
+    Date.now = () => rateLimitStart + 10_001;
+    assert.equal(submitCard(burstRoom.roomCode, "host-burst", "Later idea").cards.length, 13);
+  } finally {
+    Date.now = originalNow;
+  }
+}
+
+{
+  const originalNow = Date.now;
+  try {
+    Date.now = () => 0;
+    const expired = createRoom("host-expired");
+    Date.now = originalNow;
+    assert.equal(getRoom(expired.roomCode), null);
+  } finally {
+    Date.now = originalNow;
+  }
 }
 
 console.log("store ok");
