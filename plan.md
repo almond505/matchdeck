@@ -1,0 +1,1023 @@
+# plan.md — MatchDeck Mobile Web App Implementation Plan
+
+## 1. Product Summary
+
+Build a simple, fast, no-login mobile web app for group brainstorming.
+
+Users join a temporary room, write answers as folded cards, and wait until the host reveals all cards. After reveal, the app unfolds the cards and groups matching or closely matching answers together.
+
+Example use cases:
+
+- Food menu ideas
+- Vacation locations
+- Movie choices
+- Party games
+- Team brainstorming
+- Fun anonymous guessing games
+
+The app should feel playful, polished, and mobile-first, but implementation should remain simple.
+
+---
+
+## 2. Core Principles
+
+- Mobile-first web app
+- No login
+- Fast to open and join
+- Temporary rooms
+- Simple realtime collaboration
+- Fun card reveal animation
+- Lightweight fuzzy grouping
+- Clean architecture
+- Easy to extend later
+
+Use the UI/frontend design skills `taste` and `ui-ux-promax` when designing the interface, interactions, spacing, typography, mobile layout, and micro-animations.
+
+---
+
+## 3. Recommended Tech Stack
+
+### Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Framer Motion for card fold/reveal animation
+- Lucide React for icons
+- Optional: canvas-confetti for reveal celebration
+
+### Backend / Data
+
+- Supabase
+  - Postgres database
+  - Realtime subscriptions
+  - Row-level security can be kept simple for MVP
+- No authentication
+- Anonymous `session_id` generated in browser and stored in `localStorage`
+
+### Matching / Grouping
+
+- Start with local TypeScript grouping logic
+- Use:
+  - text normalization
+  - exact matching
+  - simple fuzzy similarity
+  - optional synonym map
+
+Do not use AI/LLM grouping in MVP.
+
+---
+
+## 4. MVP User Flow
+
+### Host Flow
+
+1. User opens app.
+2. Taps **Create Room**.
+3. App creates a room with a short room code.
+4. Host enters a prompt.
+5. Host shares room link/code.
+6. Other users join.
+7. Everyone submits cards.
+8. Host sees submission progress.
+9. Host taps **Reveal**.
+10. Cards unfold.
+11. Answers are grouped.
+12. Host can start a new round.
+
+### Participant Flow
+
+1. User opens shared link or enters room code.
+2. User enters display name.
+3. User sees the prompt.
+4. User writes an answer.
+5. Submitted answer becomes a folded card.
+6. User waits for reveal.
+7. User sees all answers and groups after reveal.
+
+---
+
+## 5. App States
+
+Room status should use these values:
+
+```ts
+type RoomStatus = "waiting" | "writing" | "revealed";
+```
+
+### State Meaning
+
+| Status | Meaning |
+|---|---|
+| `waiting` | Room exists, users can join, host can edit prompt |
+| `writing` | Users are submitting answers |
+| `revealed` | Cards are revealed and grouped |
+
+For MVP, `waiting` and `writing` can be merged in UI if simpler, but keep status values in data model.
+
+---
+
+## 6. Database Schema
+
+Create Supabase tables:
+
+### `rooms`
+
+```sql
+create table rooms (
+  id uuid primary key default gen_random_uuid(),
+  room_code text unique not null,
+  prompt text not null default '',
+  status text not null default 'waiting',
+  host_session_id text not null,
+  round_number integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '24 hours'
+);
+```
+
+### `participants`
+
+```sql
+create table participants (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references rooms(id) on delete cascade,
+  session_id text not null,
+  display_name text not null,
+  avatar text,
+  joined_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  unique(room_id, session_id)
+);
+```
+
+### `cards`
+
+```sql
+create table cards (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references rooms(id) on delete cascade,
+  participant_id uuid not null references participants(id) on delete cascade,
+  round_number integer not null default 1,
+  text text not null,
+  normalized_text text not null,
+  group_key text,
+  created_at timestamptz not null default now()
+);
+```
+
+---
+
+## 7. Environment Variables
+
+Create `.env.local.example`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+The app should show a friendly setup error if env vars are missing.
+
+---
+
+## 8. Suggested Project Structure
+
+```txt
+src/
+  app/
+    page.tsx
+    room/
+      [code]/
+        page.tsx
+
+  components/
+    app-shell.tsx
+    create-room-card.tsx
+    join-room-card.tsx
+    room-header.tsx
+    participant-list.tsx
+    prompt-panel.tsx
+    answer-form.tsx
+    folded-card.tsx
+    reveal-board.tsx
+    grouped-results.tsx
+    host-controls.tsx
+    empty-state.tsx
+
+  lib/
+    supabase/
+      client.ts
+    room-code.ts
+    session.ts
+    text-normalize.ts
+    grouping.ts
+    validation.ts
+
+  types/
+    room.ts
+    participant.ts
+    card.ts
+```
+
+---
+
+## 9. UI/UX Direction
+
+Use `taste` and `ui-ux-promax` style guidance.
+
+The UI should feel like:
+
+- Playful
+- Smooth
+- Friendly
+- Mobile party-game style
+- Clean and not childish
+- Card-based
+- Rounded corners
+- Large tap targets
+- Easy to use one-handed
+
+### Visual Ideas
+
+- Soft background gradient
+- Big prompt card
+- Folded cards with shadows
+- Emoji avatars
+- Floating room code badge
+- Bottom sticky action area on mobile
+- Reveal button with dramatic styling
+- Small confetti animation on reveal
+
+### Mobile Layout
+
+Primary target size:
+
+- 390px width mobile viewport
+- Should still work on desktop but mobile is priority
+
+Use:
+
+- max-width centered container
+- sticky host controls at bottom
+- large input fields
+- large buttons
+- avoid tiny controls
+
+---
+
+## 10. Main Screens
+
+### Home Page `/`
+
+Components:
+
+- App title
+- Short tagline
+- Create room button
+- Join room form
+- Simple explanation
+
+Actions:
+
+- Create room:
+  - Generate local `session_id` if missing
+  - Create Supabase room
+  - Redirect to `/room/{room_code}`
+
+- Join room:
+  - User enters room code
+  - Redirect to `/room/{room_code}`
+
+---
+
+### Room Page `/room/[code]`
+
+The room page should:
+
+1. Load room by room code.
+2. Generate or reuse browser `session_id`.
+3. Ask for display name if this session has not joined.
+4. Create or update participant.
+5. Subscribe to realtime changes for:
+   - room
+   - participants
+   - cards
+6. Render based on room status.
+
+---
+
+## 11. Room UI Behavior
+
+### Before Participant Joins
+
+Show name entry:
+
+```txt
+Join Room
+Room: MANGO27
+
+Your name:
+[ Almond ]
+
+[ Join ]
+```
+
+Optional avatar:
+
+- Random emoji avatar if not selected
+- Use simple emoji list
+
+---
+
+### Host View
+
+Host is determined by:
+
+```ts
+room.host_session_id === currentSessionId
+```
+
+Host can:
+
+- Edit prompt while status is `waiting`
+- Start writing
+- Reveal cards
+- Start new round
+
+---
+
+### Participant View
+
+Participants can:
+
+- See prompt
+- Submit answer
+- See their folded card
+- Wait for reveal
+- See revealed results
+
+---
+
+## 12. Card Submission Rules
+
+For MVP:
+
+- One card per participant per round
+- Max answer length: 100 characters
+- Trim empty strings
+- Prevent duplicate submission by same participant in same round
+- Allow user to edit their answer before reveal if simple to implement
+- Otherwise, allow delete/resubmit only if easy
+
+Validation:
+
+```ts
+const MAX_CARD_LENGTH = 100;
+```
+
+---
+
+## 13. Card Reveal Behavior
+
+When room status becomes `revealed`:
+
+1. Fetch all cards for current round.
+2. Group cards using `grouping.ts`.
+3. Display groups.
+4. Animate cards unfolding.
+5. Show confetti once per reveal.
+
+Suggested animation:
+
+- Before reveal: folded card with hidden text
+- On reveal:
+  - rotateX from -90 to 0
+  - opacity 0 to 1
+  - slight bounce
+  - stagger cards by index
+
+Use Framer Motion.
+
+---
+
+## 14. Grouping Logic
+
+Implement grouping in `src/lib/grouping.ts`.
+
+### Step 1: Normalize Text
+
+`text-normalize.ts`
+
+Normalize by:
+
+- lowercase
+- trim
+- collapse multiple spaces
+- remove punctuation
+- remove emoji for matching if practical
+- remove common filler words if useful
+
+Example:
+
+```ts
+normalizeAnswer("Pizza!!! 🍕") // "pizza"
+normalizeAnswer("  KFC ") // "kfc"
+```
+
+### Step 2: Synonym Map
+
+Add a simple synonym dictionary:
+
+```ts
+const SYNONYMS: Record<string, string> = {
+  kfc: "fried chicken",
+  "ไก่ทอด": "fried chicken",
+  sushi: "japanese food",
+  ramen: "japanese food",
+  tokyo: "japan",
+  osaka: "japan"
+};
+```
+
+Apply synonym after normalization.
+
+### Step 3: Similarity Matching
+
+Implement a simple string similarity function.
+
+Recommended simple implementation:
+
+- token overlap score
+- plus Levenshtein similarity for short strings
+
+Group answers if:
+
+```ts
+similarity >= 0.82
+```
+
+Keep the threshold as a constant:
+
+```ts
+export const SIMILARITY_THRESHOLD = 0.82;
+```
+
+### Step 4: Output Group Format
+
+```ts
+export type CardGroup = {
+  id: string;
+  label: string;
+  cards: CardWithParticipant[];
+  isExactMatch: boolean;
+};
+```
+
+Sort groups by:
+
+1. number of cards descending
+2. label alphabetically
+
+Create a fallback group for unique answers, or just show each unique answer as its own group.
+
+---
+
+## 15. Realtime Requirements
+
+Use Supabase Realtime subscriptions on the room page.
+
+Subscribe to:
+
+- `rooms` changes for current room
+- `participants` changes for current room
+- `cards` changes for current room and round
+
+When a realtime event arrives, refetch the relevant data.
+
+For MVP, refetching is acceptable and simpler than manually patching state.
+
+---
+
+## 16. Supabase Client
+
+Create `src/lib/supabase/client.ts`.
+
+Requirements:
+
+- Browser client only for MVP
+- Use `createClient` from `@supabase/supabase-js`
+- Validate env variables
+- Export typed client
+
+---
+
+## 17. Local Session
+
+Create `src/lib/session.ts`.
+
+Behavior:
+
+- Check `localStorage` for `fold_reveal_session_id`
+- If missing, generate UUID
+- Save to `localStorage`
+- Return session ID
+
+Also store last display name:
+
+- `fold_reveal_display_name`
+
+---
+
+## 18. Room Code Generation
+
+Create `src/lib/room-code.ts`.
+
+Requirements:
+
+- Short and human-friendly
+- 6 characters
+- Uppercase
+- Avoid confusing characters if possible
+
+Example:
+
+```ts
+MANGO7
+PIZZA2
+TOKYO9
+```
+
+Simple option:
+
+```ts
+const WORDS = ["MANGO", "PIZZA", "TOKYO", "MOCHI", "TACO", "RAMEN"];
+const code = `${randomWord}${randomDigit}`;
+```
+
+When creating a room, retry if room code already exists.
+
+---
+
+## 19. API / Data Access Design
+
+For simplicity, data actions can be implemented directly in frontend client functions for MVP.
+
+Create `src/lib/room-service.ts` if useful.
+
+Suggested functions:
+
+```ts
+createRoom(sessionId: string): Promise<Room>
+getRoomByCode(code: string): Promise<Room | null>
+joinRoom(roomId: string, sessionId: string, displayName: string, avatar: string): Promise<Participant>
+updatePrompt(roomId: string, prompt: string): Promise<void>
+startWriting(roomId: string): Promise<void>
+submitCard(roomId: string, participantId: string, roundNumber: number, text: string): Promise<void>
+revealRoom(roomId: string): Promise<void>
+startNewRound(roomId: string): Promise<void>
+```
+
+---
+
+## 20. Host Controls
+
+Host controls should show based on state.
+
+### `waiting`
+
+- Prompt input
+- Start button
+
+### `writing`
+
+- Submission progress: `3 / 5 submitted`
+- Reveal button
+- Optional: reveal disabled until at least 1 card exists
+
+### `revealed`
+
+- Start new round button
+- Optional: copy room link button
+
+---
+
+## 21. Participant Progress
+
+Show something like:
+
+```txt
+3 of 5 cards submitted
+```
+
+Participants who submitted can show a checkmark.
+
+Example:
+
+```txt
+✅ Almond
+✅ Pim
+⏳ Ken
+```
+
+Keep it friendly and compact.
+
+---
+
+## 22. New Round Behavior
+
+When host taps **New Round**:
+
+1. Increment `rooms.round_number`.
+2. Set status to `waiting`.
+3. Clear or keep prompt depending on UX preference.
+
+Recommended:
+
+- Clear prompt
+- Keep participants
+- Do not delete old cards
+- Cards are filtered by `round_number`
+
+---
+
+## 23. Error Handling
+
+Handle these cases gracefully:
+
+- Room not found
+- Room expired
+- Supabase env vars missing
+- Network error
+- Duplicate room code retry failure
+- Empty prompt
+- Empty card
+- User already submitted card
+- Realtime disconnected
+
+Use friendly messages, not technical errors.
+
+---
+
+## 24. Basic Abuse Prevention
+
+MVP limits:
+
+```ts
+MAX_PARTICIPANTS_PER_ROOM = 20;
+MAX_CARDS_PER_PARTICIPANT_PER_ROUND = 1;
+MAX_CARD_LENGTH = 100;
+ROOM_EXPIRY_HOURS = 24;
+```
+
+Add simple validation in frontend.
+
+If possible, also add basic database constraints.
+
+---
+
+## 25. Accessibility
+
+Minimum requirements:
+
+- Buttons have readable labels
+- Color contrast is acceptable
+- Inputs have labels
+- UI works without hover
+- Animations are not too aggressive
+- Respect reduced motion if easy
+
+For reduced motion:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms;
+    transition-duration: 0.01ms;
+  }
+}
+```
+
+---
+
+## 26. Responsive Design
+
+Breakpoints:
+
+- Mobile first
+- Tablet/desktop should center content in a max-width container
+
+Recommended layout:
+
+```txt
+body
+  main max-w-md mx-auto min-h-screen px-4 py-4
+```
+
+On desktop:
+
+- Keep app narrow like a mobile game
+- Do not stretch cards too wide
+
+---
+
+## 27. Implementation Phases
+
+## Phase 1 — Project Setup
+
+Tasks:
+
+- Create Next.js app with TypeScript
+- Add Tailwind CSS
+- Add Supabase client
+- Add Framer Motion
+- Add base layout
+- Add `.env.local.example`
+- Add README setup notes
+
+Acceptance criteria:
+
+- App runs locally
+- Home page displays correctly on mobile width
+- No TypeScript errors
+
+---
+
+## Phase 2 — Supabase Schema
+
+Tasks:
+
+- Add SQL migration/schema file
+- Create `rooms`, `participants`, `cards`
+- Add useful indexes
+- Add sample RLS policy or disable RLS for MVP local testing with clear note
+
+Indexes:
+
+```sql
+create index idx_rooms_room_code on rooms(room_code);
+create index idx_participants_room_id on participants(room_id);
+create index idx_cards_room_round on cards(room_id, round_number);
+```
+
+Acceptance criteria:
+
+- Tables can be created in Supabase
+- App can read/write rooms, participants, cards
+
+---
+
+## Phase 3 — Create and Join Room
+
+Tasks:
+
+- Implement local session ID
+- Implement room code generation
+- Implement create room flow
+- Implement join by room code flow
+- Implement room page loading
+- Implement display name entry
+- Implement participant creation
+
+Acceptance criteria:
+
+- User can create a room
+- User can open room URL
+- Another browser can join same room
+- Participant list updates after refresh
+
+---
+
+## Phase 4 — Prompt and Writing State
+
+Tasks:
+
+- Host can edit prompt
+- Host can start the round
+- Participants can see prompt
+- Participants can submit one card
+- Folded card appears after submit
+- Submission count works
+
+Acceptance criteria:
+
+- Prompt is shared
+- Each participant can submit one answer
+- Cards are hidden before reveal
+- Host sees progress
+
+---
+
+## Phase 5 — Realtime Sync
+
+Tasks:
+
+- Subscribe to room changes
+- Subscribe to participant changes
+- Subscribe to card changes
+- Refetch on changes
+- Clean up subscriptions on unmount
+
+Acceptance criteria:
+
+- New participants appear without manual refresh
+- Submitted cards update without manual refresh
+- Reveal state updates on all devices
+
+---
+
+## Phase 6 — Reveal and Grouping
+
+Tasks:
+
+- Implement text normalization
+- Implement synonym mapping
+- Implement similarity scoring
+- Implement group creation
+- Host reveal button updates room status
+- Revealed view displays grouped results
+
+Acceptance criteria:
+
+- Cards are hidden before reveal
+- Cards show after reveal
+- Similar answers are grouped
+- Groups are sorted by popularity
+
+---
+
+## Phase 7 — UI Polish
+
+Tasks:
+
+- Improve mobile layout
+- Add folded card animation
+- Add reveal animation
+- Add confetti
+- Add emoji avatars
+- Add copy room link button
+- Add empty states
+- Add friendly error states
+
+Acceptance criteria:
+
+- App feels fun on mobile
+- Reveal animation is smooth
+- Core flow is understandable without instructions
+
+---
+
+## Phase 8 — New Round
+
+Tasks:
+
+- Host can start a new round
+- Increment round number
+- Clear prompt
+- Keep participants
+- Filter cards by current round
+
+Acceptance criteria:
+
+- Room can be reused
+- Old cards do not appear in new writing round
+- New reveal only shows current round cards
+
+---
+
+## 28. Important Non-Goals for MVP
+
+Do not implement yet:
+
+- User accounts
+- Password login
+- Admin dashboard
+- Payments
+- Native mobile app
+- Push notifications
+- AI semantic grouping
+- Long-term history
+- Complex moderation
+- Complex permissions
+- Full offline mode
+
+---
+
+## 29. Suggested Nice-to-Have Features After MVP
+
+Future improvements:
+
+- Multiple cards per user
+- Anonymous mode
+- Voting after reveal
+- “Most matched answer” badge
+- “Funniest answer” vote
+- AI semantic grouping
+- Room themes
+- QR code room sharing
+- Export results as image
+- Timed writing rounds
+- Host lock/unlock submissions
+- Profanity filter
+- Public party mode
+
+---
+
+## 30. Quality Checklist
+
+Before considering implementation complete:
+
+- Works on mobile Chrome and Safari
+- Create room works
+- Join room works
+- Realtime updates work
+- Submit card works
+- Reveal works
+- Grouping works
+- New round works
+- No login required
+- No obvious console errors
+- UI is readable on 390px width
+- Buttons are easy to tap
+- Empty/error states are friendly
+- README explains setup
+
+---
+
+## 31. README Requirements
+
+Add a `README.md` with:
+
+- Project summary
+- Tech stack
+- Setup instructions
+- Supabase setup
+- Environment variables
+- Local development command
+- Database schema or migration location
+- Known limitations
+- Future ideas
+
+---
+
+## 32. Suggested First Codex Task
+
+Start with this task:
+
+```txt
+Implement Phase 1 to Phase 3 from plan.md.
+
+Create a Next.js TypeScript mobile-first app for MatchDeck.
+Use Tailwind CSS, Supabase client setup, local anonymous session ID, room code generation, create room flow, join room flow, and participant display name entry.
+
+Keep UI polished using taste and ui-ux-promax.
+Do not implement reveal/grouping yet.
+```
+
+---
+
+## 33. Suggested Second Codex Task
+
+```txt
+Continue from plan.md.
+
+Implement Phase 4 to Phase 6:
+host prompt editing, writing state, card submission, realtime sync, reveal state, card unfolding UI, and fuzzy grouping logic.
+
+Keep the app simple, mobile-first, and no-login.
+```
+
+---
+
+## 34. Suggested Third Codex Task
+
+```txt
+Continue from plan.md.
+
+Implement Phase 7 to Phase 8:
+mobile UI polish, animations, confetti, emoji avatars, copy room link, friendly empty/error states, and new round behavior.
+
+Focus heavily on UX quality using taste and ui-ux-promax.
+```
+
+---
+
+## 35. Final Implementation Notes for Codex
+
+Prioritize a working MVP over perfect architecture.
+
+Make the app feel fun, fast, and clear.
+
+When uncertain, choose the simpler implementation.
+
+Avoid overbuilding.
+
+Keep files small and readable.
+
+Use TypeScript types for room, participant, and card objects.
+
+Use clear component boundaries.
+
+Make the app usable from a phone without instructions.
