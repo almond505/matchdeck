@@ -28,7 +28,17 @@ async function run() {
   const revealedRoom = await revealed.json();
   assert.equal(revealedRoom.cards[0].text, "Secret pizza");
 
-  console.log("room route redaction ok");
+  const oversizedName = await post({ action: "join", code: room.roomCode, sessionId: "guest-validation", displayName: "a".repeat(33) });
+  assert.equal(oversizedName.status, 400);
+
+  const invalidStatus = await post({ action: "patch", code: room.roomCode, sessionId: "host-redaction", patch: { status: "dealing" } });
+  assert.equal(invalidStatus.status, 400);
+
+  await post({ action: "patch", code: room.roomCode, sessionId: "host-redaction", patch: { status: "writing" } });
+  const oversizedAnswer = await post({ action: "submit", code: room.roomCode, sessionId: "guest-redaction", text: "a".repeat(101) });
+  assert.equal(oversizedAnswer.status, 400);
+
+  console.log("room route checks ok");
 }
 
 void run();
