@@ -23,6 +23,16 @@ async function run() {
   assert.equal(hiddenRoom.cards[0].text, "");
   assert.equal(hiddenRoom.cards[0].normalizedText, "");
 
+  const guestView = await GET(new Request(`http://localhost/api/room?code=${room.roomCode}`, {
+    headers: { "X-MatchDeck-Session": "guest-redaction" },
+  }));
+  const guestRoom = await guestView.json();
+  const guest = guestRoom.participants.find((participant: { displayName: string }) => participant.displayName === "Guest");
+  assert.equal("hostSessionId" in guestRoom, false);
+  assert.equal("sessionId" in guest, false);
+  assert.equal(guestRoom.viewer.participantId, guest.id);
+  assert.equal(guestRoom.viewer.isHost, false);
+
   await post({ action: "patch", code: room.roomCode, sessionId: "host-redaction", patch: { status: "revealed" } });
   const revealed = await GET(new Request(`http://localhost/api/room?code=${room.roomCode}`));
   const revealedRoom = await revealed.json();

@@ -9,6 +9,8 @@ export type Participant = {
   joinedAt: string;
 };
 
+export type PublicParticipant = Omit<Participant, "sessionId">;
+
 export type Card = {
   id: string;
   roomId: string;
@@ -33,8 +35,13 @@ export type Room = {
   cards: Card[];
 };
 
+export type RoomView = Omit<Room, "hostSessionId" | "participants"> & {
+  participants: PublicParticipant[];
+  viewer: { participantId?: string; isHost: boolean };
+};
+
 export type CardWithParticipant = Card & {
-  participant: Participant;
+  participant: PublicParticipant;
 };
 
 export type CardGroup = {

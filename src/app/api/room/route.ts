@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createRoom, getRoom, joinRoom, patchRoom, submitCard } from "@/lib/store";
-import type { Room, RoomStatus } from "@/types";
+import type { Room, RoomStatus, RoomView } from "@/types";
 
 const ROOM_STATUSES: RoomStatus[] = ["waiting", "writing", "revealed"];
 const MAX = { card: 100, name: 32, prompt: 140, roomCode: 6, sessionId: 128 };
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return jsonError(error instanceof Error ? error.message : "Room code invalid.", 400);
   }
   const room = getRoom(roomCode);
-  return room ? roomResponse(room) : jsonError("Room not found.", 404);
+  return room ? roomResponse(room, request.headers.get("X-MatchDeck-Session") ?? undefined) : jsonError("Room not found.", 404);
 }
 
 export async function POST(request: Request) {
@@ -22,11 +22,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     if (!isRecord(body)) throw new Error("Request body must be an object.");
     const sessionId = required(body.sessionId, "Session", MAX.sessionId);
-    if (body.action === "create") return roomResponse(createRoom(sessionId));
+    if (body.action === "create") return roomResponse(createRoom(sessionId), sessionId);
     const roomCode = validRoomCode(body.code);
-    if (body.action === "join") return roomResponse(joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)));
-    if (body.action === "patch") return roomResponse(patchRoom(roomCode, sessionId, validPatch(body.patch)));
-    if (body.action === "submit") return roomResponse(submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)));
+    if (body.action === "join") return roomResponse(joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)), sessionId);
+    if (body.action === "patch") return roomResponse(patchRoom(roomCode, sessionId, validPatch(body.patch)), sessionId);
+    if (body.action === "submit") return roomResponse(submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)), sessionId);
     return jsonError("Unknown action.", 400);
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Something went wrong.", 400);
@@ -74,10 +74,16 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function roomResponse(room: Room) {
-  if (room.status === "revealed") return NextResponse.json(room);
-  return NextResponse.json({
-    ...room,
-    cards: room.cards.map((card) => ({ ...card, text: "", normalizedText: "" })),
-  });
+function roomResponse(room: Room, viewerSessionId?: string) {
+  const { hostSessionId, participants, ...publicRoom } = room;
+  const viewer = participants.find((participant) => participant.sessionId === viewerSessionId);
+  const response: RoomView = {
+    ...publicRoom,
+    participants: participants.map(({ sessionId: _, ...participant }) => participant),
+    cards: room.status === "revealed"
+      ? room.cards
+      : room.cards.map((card) => ({ ...card, text: "", normalizedText: "" })),
+    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId },
+  };
+  return NextResponse.json(response);
 }

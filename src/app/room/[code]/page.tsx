@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { groupCards } from "@/lib/grouping";
 import { getSavedName, getSessionId, saveName } from "@/lib/session";
-import type { CardWithParticipant, Room } from "@/types";
+import type { CardWithParticipant, RoomView } from "@/types";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,7 +17,7 @@ export default function RoomPage() {
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
   const [sessionId, setSessionId] = useState("");
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<RoomView | null>(null);
   const [name, setName] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
@@ -25,8 +25,8 @@ export default function RoomPage() {
   const revealRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLElement>(null);
 
-  const me = room?.participants.find((participant) => participant.sessionId === sessionId);
-  const isHost = room?.hostSessionId === sessionId;
+  const me = room?.participants.find((participant) => participant.id === room.viewer.participantId);
+  const isHost = room?.viewer.isHost;
   const roundCards = useMemo(() => room?.cards.filter((card) => card.roundNumber === room.roundNumber) ?? [], [room]);
   const cardsWithPeople = useMemo<CardWithParticipant[]>(() => {
     if (!room) return [];
@@ -46,7 +46,10 @@ export default function RoomPage() {
     if (!code) return;
     let alive = true;
     async function load() {
-      const res = await fetch(`/api/room?code=${code}`, { cache: "no-store" });
+      const res = await fetch(`/api/room?code=${code}`, {
+        cache: "no-store",
+        headers: sessionId ? { "X-MatchDeck-Session": sessionId } : undefined,
+      });
       const body = await res.json();
       if (!alive) return;
       if (res.ok) setRoom(body);
@@ -58,7 +61,7 @@ export default function RoomPage() {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [code]);
+  }, [code, sessionId]);
 
   useEffect(() => {
     if (room?.status !== "revealed" || !revealRef.current) return;
@@ -248,7 +251,7 @@ export default function RoomPage() {
   );
 }
 
-function DealerControls({ room, cards, act }: { room: Room; cards: number; act: (payload: Record<string, unknown>) => Promise<Room | null> }) {
+function DealerControls({ room, cards, act }: { room: RoomView; cards: number; act: (payload: Record<string, unknown>) => Promise<RoomView | null> }) {
   return (
     <section className="mt-6 rounded-xl border border-[#f7d57a]/25 bg-[#24120e]/70 p-5 sm:p-6">
       <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-[#f7d57a]">Dealer controls</p>
