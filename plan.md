@@ -17,22 +17,24 @@ The original plan begins below. This status section is the current source of tru
 - Room API responses redact card and normalized text until reveal, so a client cannot read folded ideas from the response payload.
 - Room responses omit host and participant session IDs. The client receives only viewer-specific participant and host metadata.
 - Server-side mutation validation rejects malformed room codes, invalid room states, and oversized names, prompts, and card text without limiting the number of cards a participant can submit.
+- Expired in-memory rooms are pruned on reads, mutations, and room creation, so stale data is not returned or retained after access.
+- Card submissions allow a burst of 12 folds per participant every 10 seconds, then resume automatically; rounds still allow unlimited cards over time.
 - Supabase SQL schema and client setup are present for future persistence.
-- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, and input validation. `npm run test`, `npm run check`, and a production build have passed during implementation.
+- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, input validation, expiry, and submission throttling. `npm run test`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
 
 - Runtime data currently lives in a small in-memory Next API store, not Supabase. Rooms reset when the server restarts.
 - Clients poll the room API every 1.2 seconds; there are no realtime subscriptions yet.
 - The API exposes a deliberately limited public room view. Browser session IDs remain bearer credentials held in local storage and sent only with the caller's request.
-- The local Git repository contains atomic commits for the casino-table interface, card redaction, input validation, and private session projection.
+- The local Git repository contains atomic commits for the casino-table interface, room secrecy, validation, expiry cleanup, and submission throttling.
 
 ### Remaining Backlog
 
 #### Must Do Before Real Multi-Person Use
 
 1. Move the in-memory room store to Supabase/Postgres and add Supabase Realtime so room updates do not rely on polling.
-2. Add expiry cleanup and request rate limits; current validation is server-side, but there is no abuse protection yet.
+2. Add durable, distributed expiry cleanup and rate limiting alongside the persistent store; the current safeguards are process-local.
 3. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
 4. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
