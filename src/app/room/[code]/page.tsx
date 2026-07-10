@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { groupCards } from "@/lib/grouping";
 import { getSavedName, getSessionId, saveName } from "@/lib/session";
-import type { CardWithParticipant, RoomView } from "@/types";
+import type { CardWithParticipant, PublicParticipant, RoomView } from "@/types";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -177,7 +177,7 @@ export default function RoomPage() {
               </div>
             ) : room.status === "revealed" ? (
               <div className="reveal-table-grid mt-5" aria-label="All face-up cards on the table">
-                {cardsWithPeople.map((card, index) => <PlayingCard key={card.id} text={card.text} subtext={`${card.participant.avatar} ${card.participant.displayName}`} tone={index} />)}
+                {cardsWithPeople.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
                 {cardsWithPeople.length === 0 && <p className="col-span-full grid min-h-44 place-items-center text-center font-bold text-[#e8d8ad]">No cards were dealt this round.</p>}
               </div>
             ) : (
@@ -192,7 +192,7 @@ export default function RoomPage() {
         <div className="mt-4 flex flex-wrap gap-2" aria-label="Players at the table">
           {room.participants.map((person) => {
             const count = roundCards.filter((card) => card.participantId === person.id).length;
-            return <span key={person.id} className="rounded-full border border-[#f7d57a]/25 bg-[#26130f]/75 px-3 py-2 text-sm font-bold text-[#f7f0d9]">{person.avatar} {person.displayName} · {count || "no cards"}</span>;
+            return <span key={person.id} className="rounded-full border border-[#f7d57a]/25 bg-[#26130f]/75 px-3 py-2 text-sm font-bold text-[#f7f0d9]">{playerCardLabel(person)} {person.displayName} · {count || "no cards"}</span>;
           })}
         </div>
 
@@ -207,7 +207,7 @@ export default function RoomPage() {
             </div>
 
             <article ref={composerRef} className="playing-card relative min-h-[19rem] p-4 text-[#19100d] shadow-2xl">
-              <CardCorners tone={0} />
+              <CardCorners card={me} />
               <div className="flex h-full flex-col rounded-md border border-[#19100d]/15 p-4">
                 <label className="text-center text-xs font-black uppercase tracking-[0.2em] text-[#9e1928]" htmlFor="answer">Your next card</label>
                 <textarea id="answer" value={answer} maxLength={100} onChange={(event) => setAnswer(event.target.value)} className="mt-5 min-h-24 flex-1 resize-none bg-transparent text-center font-display text-3xl font-black leading-tight outline-none placeholder:text-[#19100d]/35" placeholder="Write an idea" />
@@ -236,7 +236,7 @@ export default function RoomPage() {
                       <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
                     </div>
                     <div className="match-card-grid mt-5">
-                      {group.cards.map((card, cardIndex) => <PlayingCard key={card.id} text={card.text} subtext={`${card.participant.avatar} ${card.participant.displayName}`} tone={cardIndex} />)}
+                      {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
                     </div>
                   </div>
                 </motion.article>
@@ -303,29 +303,30 @@ function CardBack({ index }: { index: number }) {
   );
 }
 
-function PlayingCard({ text, subtext, tone = 0 }: { text: string; subtext: string; tone?: number }) {
+function PlayingCard({ text, card }: { text: string; card: PublicParticipant }) {
   return (
     <article className="playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl">
-      <CardCorners tone={tone} />
+      <CardCorners card={card} />
       <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
         <div>
-          <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#6c4a31]">{subtext}</p>
-          <p className="mt-3 break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
+          <p className="break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
         </div>
       </div>
     </article>
   );
 }
 
-function CardCorners({ tone }: { tone: number }) {
-  const suits = ["♠", "♥", "♣", "♦"];
-  const suit = suits[tone % suits.length];
-  const red = suit === "♥" || suit === "♦";
+function CardCorners({ card }: { card: Pick<PublicParticipant, "cardRank" | "cardSuit"> }) {
+  const red = card.cardSuit === "♥" || card.cardSuit === "♦";
   const color = red ? "text-[#9e1928]" : "text-[#19100d]";
   return (
     <>
-      <div className={`absolute left-3 top-2 text-center font-black leading-none ${color}`}><div>A</div><div className="text-sm">{suit}</div></div>
-      <div className={`absolute bottom-2 right-3 rotate-180 text-center font-black leading-none ${color}`}><div>A</div><div className="text-sm">{suit}</div></div>
+      <div className={`absolute left-3 top-2 text-center font-black leading-none ${color}`}><div>{card.cardRank}</div><div className="text-sm">{card.cardSuit}</div></div>
+      <div className={`absolute bottom-2 right-3 rotate-180 text-center font-black leading-none ${color}`}><div>{card.cardRank}</div><div className="text-sm">{card.cardSuit}</div></div>
     </>
   );
+}
+
+function playerCardLabel(participant: Pick<PublicParticipant, "cardRank" | "cardSuit">) {
+  return `${participant.cardRank}${participant.cardSuit}`;
 }

@@ -5,7 +5,8 @@ export type Participant = {
   roomId: string;
   sessionId: string;
   displayName: string;
-  avatar: string;
+  cardRank: string;
+  cardSuit: string;
   joinedAt: string;
 };
 

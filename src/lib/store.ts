@@ -2,7 +2,8 @@ import { roomCode } from "./room-code";
 import { normalizeAnswer } from "./text-normalize";
 import type { Card, Participant, Room, RoomStatus } from "@/types";
 
-const avatars = ["AL", "PX", "MO", "TA", "RA", "SU", "BE"];
+const cardRanks = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
+const cardSuits = ["♣", "♠", "♥", "♦"];
 
 type Db = Map<string, Room>;
 type CardSubmissionWindow = { count: number; resetsAt: number };
@@ -21,6 +22,7 @@ function now() {
 }
 
 function publicRoom(room: Room): Room {
+  ensureParticipantCards(room);
   return structuredClone(room);
 }
 
@@ -68,7 +70,7 @@ export function joinRoom(code: string, sessionId: string, displayName: string) {
     roomId: room.id,
     sessionId,
     displayName,
-    avatar: avatars[room.participants.length % avatars.length],
+    ...participantCard(room.participants.length),
     joinedAt,
   };
   room.participants.push(participant);
@@ -140,6 +142,19 @@ function assertCardSubmissionAllowed(roomId: string, sessionId: string) {
   }
   if (window.count >= CARD_SUBMISSION_LIMIT) throw new Error("Too many cards too quickly. Try again in a moment.");
   window.count += 1;
+}
+
+function participantCard(index: number) {
+  return {
+    cardRank: cardRanks[index % cardRanks.length],
+    cardSuit: cardSuits[index % cardSuits.length],
+  };
+}
+
+function ensureParticipantCards(room: Room) {
+  room.participants.forEach((participant, index) => {
+    if (!participant.cardRank || !participant.cardSuit) Object.assign(participant, participantCard(index));
+  });
 }
 
 function mustHost(code: string, sessionId: string) {

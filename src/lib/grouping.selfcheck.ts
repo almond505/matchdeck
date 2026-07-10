@@ -7,7 +7,8 @@ const participant = {
   roomId: "r1",
   sessionId: "s1",
   displayName: "Almond",
-  avatar: "A",
+  cardRank: "A",
+  cardSuit: "♣",
   joinedAt: "",
 };
 

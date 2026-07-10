@@ -9,6 +9,14 @@ const updated = submitCard(room.roomCode, "host-unlimited", "Sushi");
 
 assert.equal(updated.cards.length, 2);
 
+const identityRoom = createRoom("host-identities");
+const firstIdentity = joinRoom(identityRoom.roomCode, "host-identities", "First");
+const secondIdentity = joinRoom(identityRoom.roomCode, "second-identities", "Second");
+assert.equal(firstIdentity.participants[0].cardRank, "A");
+assert.equal(firstIdentity.participants[0].cardSuit, "♣");
+assert.equal(secondIdentity.participants[1].cardRank, "K");
+assert.equal(secondIdentity.participants[1].cardSuit, "♠");
+
 {
   const originalNow = Date.now;
   const rateLimitStart = originalNow();
