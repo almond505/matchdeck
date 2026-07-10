@@ -1,5 +1,54 @@
 # plan.md — MatchDeck Mobile Web App Implementation Plan
 
+## Implementation Status — 2026-07-10
+
+The original plan begins below. This status section is the current source of truth for work completed in the repository and the remaining MVP backlog.
+
+### Completed
+
+- Next.js, React, TypeScript, Tailwind CSS, Lucide, GSAP, Framer Motion, and canvas-confetti are configured.
+- Anonymous browser session IDs, saved display names, room-code generation, and create/join flows are implemented.
+- Rooms support host prompt editing, `waiting` / `writing` / `revealed` states, shareable room links, participant display, and new rounds.
+- A participant can fold any number of cards in a round; submissions no longer replace an earlier card.
+- Text normalization and lightweight fuzzy grouping are implemented, including punctuation normalization and a small synonym map.
+- The room has a casino-table UI: green felt, face-down playing-card backs while writing, a GSAP fold-to-table motion, and confetti at reveal.
+- Reveal now keeps every submitted card face-up on the main table and renders matching cards again in readable, responsive match piles.
+- Group UI no longer uses the flattening 3D rotation that compressed match piles into thin strips.
+- Supabase SQL schema and client setup are present for future persistence.
+- Automated checks exist for grouping and multi-card storage behavior. `npm run test`, `npm run check`, and a production build have passed during implementation.
+
+### Current Technical Shape
+
+- Runtime data currently lives in a small in-memory Next API store, not Supabase. Rooms reset when the server restarts.
+- Clients poll the room API every 1.2 seconds; there are no realtime subscriptions yet.
+- The UI hides card text before reveal, but the current API response still includes card text. This is not secure enough for genuinely secret brainstorming.
+- The local Git repository was initialized with an initial baseline commit. Later UI work is currently uncommitted because staging was blocked by the execution environment's usage limit.
+
+### Remaining Backlog
+
+#### Must Do Before Real Multi-Person Use
+
+1. Redact unrevealed card text from API responses for non-owners, then add API tests proving it cannot be read before reveal.
+2. Move the in-memory room store to Supabase/Postgres and add Supabase Realtime so room updates do not rely on polling.
+3. Add expiry cleanup and enforce server-side validation/rate limits for room, prompt, name, and card input.
+4. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
+5. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
+
+#### Next UX Improvements
+
+1. Add a clear copied-link confirmation and optional QR room sharing.
+2. Let the host lock submissions, set an optional timer, and reopen a writing round when needed.
+3. Add card editing or removal before reveal, with a deliberate host/participant permission policy.
+4. Improve grouping controls: let the host merge, split, rename, or hide a match pile after reveal.
+5. Add reveal recap, voting, and export only after the core persistent/realtime flow is stable.
+
+#### Deferred Product Ideas
+
+- Anonymous mode and alternate table themes.
+- Voting for funniest or most useful answer.
+- Timed party mode, moderation tools, and profanity filtering.
+- AI-assisted semantic grouping, after transparent manual grouping controls exist.
+
 ## 1. Product Summary
 
 Build a simple, fast, no-login mobile web app for group brainstorming.
@@ -909,7 +958,6 @@ Do not implement yet:
 
 Future improvements:
 
-- Multiple cards per user
 - Anonymous mode
 - Voting after reveal
 - “Most matched answer” badge

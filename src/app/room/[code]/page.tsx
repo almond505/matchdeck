@@ -3,7 +3,7 @@
 import confetti from "canvas-confetti";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Copy, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Copy, FoldVertical, RefreshCw, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -21,12 +21,13 @@ export default function RoomPage() {
   const [name, setName] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
+  const [isFolding, setIsFolding] = useState(false);
   const revealRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLElement>(null);
 
-  const me = room?.participants.find((p) => p.sessionId === sessionId);
+  const me = room?.participants.find((participant) => participant.sessionId === sessionId);
   const isHost = room?.hostSessionId === sessionId;
   const roundCards = useMemo(() => room?.cards.filter((card) => card.roundNumber === room.roundNumber) ?? [], [room]);
-  const myCards = roundCards.filter((card) => card.participantId === me?.id);
   const cardsWithPeople = useMemo<CardWithParticipant[]>(() => {
     if (!room) return [];
     return roundCards.flatMap((card) => {
@@ -52,22 +53,25 @@ export default function RoomPage() {
       else setError(body.error ?? "Room not found.");
     }
     load();
-    const timer = setInterval(load, 1200);
+    const timer = window.setInterval(load, 1200);
     return () => {
       alive = false;
-      clearInterval(timer);
+      window.clearInterval(timer);
     };
   }, [code]);
 
   useEffect(() => {
     if (room?.status !== "revealed" || !revealRef.current) return;
-    gsap.fromTo(
-      ".reveal-card",
-      { y: 80, opacity: 0.2, scale: 0.9 },
-      { y: 0, opacity: 1, scale: 1, stagger: 0.09, ease: "back.out(1.4)", scrollTrigger: { trigger: revealRef.current, start: "top 78%", scrub: 0.6 } },
-    );
-    gsap.to(".scrub-word", { opacity: 1, stagger: 0.04, scrollTrigger: { trigger: revealRef.current, start: "top 85%", end: "top 35%", scrub: true } });
-    confetti({ particleCount: 90, spread: 70, origin: { y: 0.72 } });
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        ".reveal-card",
+        { y: 80, opacity: 0.2, scale: 0.9 },
+        { y: 0, opacity: 1, scale: 1, stagger: 0.09, ease: "back.out(1.4)", scrollTrigger: { trigger: revealRef.current, start: "top 78%", scrub: 0.6 } },
+      );
+      gsap.to(".scrub-word", { opacity: 1, stagger: 0.04, scrollTrigger: { trigger: revealRef.current, start: "top 85%", end: "top 35%", scrub: true } });
+    }, revealRef);
+    confetti({ particleCount: 90, spread: 70, origin: { y: 0.72 }, colors: ["#f7d57a", "#f4f0df", "#af1f2e"] });
+    return () => context.revert();
   }, [room?.status, room?.roundNumber]);
 
   async function act(payload: Record<string, unknown>) {
@@ -78,38 +82,63 @@ export default function RoomPage() {
       body: JSON.stringify({ code, sessionId, ...payload }),
     });
     const body = await res.json();
-    if (!res.ok) return setError(body.error ?? "Could not update room.");
+    if (!res.ok) {
+      setError(body.error ?? "Could not update room.");
+      return null;
+    }
     setRoom(body);
     return body;
   }
 
   async function submitAnswer() {
-    const body = await act({ action: "submit", text: answer });
+    const text = answer.trim();
+    if (!text || isFolding) return;
+    setIsFolding(true);
+
+    await new Promise<void>((resolve) => {
+      if (!composerRef.current) return resolve();
+      gsap.to(composerRef.current, {
+        duration: 0.48,
+        ease: "power3.in",
+        opacity: 0.08,
+        rotateX: -92,
+        scale: 0.72,
+        transformOrigin: "top center",
+        y: 82,
+        onComplete: resolve,
+      });
+    });
+
+    const body = await act({ action: "submit", text });
     if (body) setAnswer("");
+    gsap.set(composerRef.current, { clearProps: "opacity,rotateX,scale,transformOrigin,y" });
+    setIsFolding(false);
   }
 
   if (error && !room) return <Shell code={code}><Message text={error} /></Shell>;
-  if (!room) return <Shell code={code}><Message text="Loading room." /></Shell>;
+  if (!room) return <Shell code={code}><Message text="Setting the table." /></Shell>;
 
   if (!me) {
     return (
       <Shell code={code}>
-        <section className="mx-auto flex min-h-screen max-w-md items-center px-5 py-24">
-          <div className="w-full rounded-[2rem] border border-white/15 bg-black/35 p-5 shadow-2xl backdrop-blur">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-200">Room {code}</p>
-            <h1 className="mt-3 text-5xl font-black leading-none">Name on folded card?</h1>
-            <label className="mt-8 block text-sm font-bold" htmlFor="name">Display name</label>
-            <input id="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 min-h-14 w-full rounded-2xl bg-white px-4 text-lg font-black text-stone-950 outline-none" placeholder="Almond" />
-            <button
-              onClick={() => {
-                saveName(name);
-                act({ action: "join", displayName: name });
-              }}
-              className="mt-4 min-h-14 w-full rounded-2xl bg-orange-500 font-black text-white"
-            >
-              Join
-            </button>
-            {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
+        <section className="mx-auto flex min-h-screen max-w-lg items-center px-4 py-24">
+          <div className="casino-table-rail w-full p-3">
+            <div className="casino-felt p-6 sm:p-8">
+              <p className="font-display text-sm font-black uppercase tracking-[0.24em] text-[#f7d57a]">Table {code}</p>
+              <h1 className="mt-4 max-w-xl font-display text-5xl font-black leading-[0.92] text-[#f7f0d9]">Put your name at the table.</h1>
+              <label className="mt-9 block text-sm font-bold text-[#e8d8ad]" htmlFor="name">Display name</label>
+              <input id="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 min-h-14 w-full rounded-lg border-2 border-[#311a13] bg-[#f7f0d9] px-4 text-lg font-black text-[#19100d] outline-none ring-offset-2 focus:ring-2 focus:ring-[#f7d57a]" placeholder="Almond" />
+              <button
+                onClick={() => {
+                  saveName(name);
+                  act({ action: "join", displayName: name });
+                }}
+                className="mt-4 min-h-14 w-full rounded-lg bg-[#f7d57a] font-black text-[#19100d] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#fff1b8]"
+              >
+                Take a seat
+              </button>
+              {error && <p className="mt-4 rounded-lg border border-red-200/25 bg-red-950/55 p-3 text-sm text-red-100">{error}</p>}
+            </div>
           </div>
         </section>
       </Shell>
@@ -118,70 +147,94 @@ export default function RoomPage() {
 
   return (
     <Shell code={code}>
-      <section className="mx-auto max-w-md px-4 pb-32 pt-28">
-        <div className="rounded-[2rem] border border-white/15 bg-white/[0.08] p-5 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-orange-200">{room.status.toUpperCase()} · ROUND {room.roundNumber}</p>
-              <h1 className="mt-2 text-4xl font-black leading-none">{room.prompt || "Host is writing prompt."}</h1>
-            </div>
-            <button onClick={() => navigator.clipboard?.writeText(location.href)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-stone-950" aria-label="Copy room link">
-              <Copy size={20} />
-            </button>
+      <section className="mx-auto max-w-6xl px-4 pb-24 pt-24 sm:px-6">
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-display text-xs font-black uppercase tracking-[0.26em] text-[#f7d57a]">Round {room.roundNumber} · {room.status}</p>
+            <h1 className="mt-2 max-w-4xl font-display text-[clamp(2.4rem,6vw,5.5rem)] font-black leading-[0.92] text-[#f7f0d9]">{room.prompt || "The dealer is choosing a prompt."}</h1>
           </div>
+          <button onClick={() => navigator.clipboard?.writeText(location.href)} className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-4 font-bold text-[#f7f0d9] transition-colors hover:bg-[#3a1b13]" aria-label="Copy room link">
+            <Copy size={18} /> Copy table
+          </button>
+        </header>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            {room.participants.map((person) => {
-              const count = roundCards.filter((card) => card.participantId === person.id).length;
-              return <span key={person.id} className="rounded-full bg-white/10 px-3 py-2 text-sm font-bold">{count || "·"} {person.avatar} {person.displayName}</span>;
-            })}
-          </div>
-        </div>
-
-        {isHost && (
-          <div className="mt-4 rounded-[2rem] border border-white/15 bg-black/35 p-5 backdrop-blur">
-            <label className="text-sm font-bold text-orange-200" htmlFor="prompt">Prompt</label>
-            <textarea id="prompt" disabled={room.status !== "waiting"} value={room.prompt} onChange={(event) => act({ action: "patch", patch: { prompt: event.target.value } })} className="mt-2 min-h-24 w-full rounded-2xl bg-white px-4 py-3 font-bold text-stone-950 outline-none disabled:opacity-70" placeholder="Where should we eat tonight?" />
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <button disabled={!room.prompt.trim() || room.status !== "waiting"} onClick={() => act({ action: "patch", patch: { status: "writing" } })} className="min-h-12 rounded-2xl bg-white font-black text-stone-950 disabled:opacity-40">Start</button>
-              <button disabled={!roundCards.length || room.status !== "writing"} onClick={() => act({ action: "patch", patch: { status: "revealed" } })} className="min-h-12 rounded-2xl bg-orange-500 font-black text-white disabled:opacity-40">Reveal</button>
-              <button onClick={() => act({ action: "patch", patch: { newRound: true } })} className="grid min-h-12 place-items-center rounded-2xl border border-white/20 text-white" aria-label="New round"><RefreshCw /></button>
+        <div className="casino-table-rail p-3 sm:p-4">
+          <div className="casino-felt min-h-[25rem] p-4 sm:min-h-[31rem] sm:p-7">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f7d57a]/30 pb-4 text-[#e8d8ad]">
+              <p className="font-display text-sm font-black uppercase tracking-[0.22em]">The felt</p>
+              <p className="text-sm font-bold">{roundCards.length} {room.status === "revealed" ? "face-up" : "folded"} {roundCards.length === 1 ? "card" : "cards"} · {new Set(roundCards.map((card) => card.participantId)).size} players</p>
             </div>
-          </div>
-        )}
 
-        {room.status === "writing" && (
-          <div className="mt-4 rounded-[2rem] border border-white/15 bg-white/[0.08] p-5">
-            <p className="font-bold text-stone-200">{roundCards.length} cards from {new Set(roundCards.map((card) => card.participantId)).size} people</p>
-            <div className="mt-4 rounded-3xl border border-white/20 bg-orange-100 p-4 text-stone-950 shadow-2xl">
-              <p className="text-sm font-black uppercase tracking-[0.16em]">Your next card</p>
-              <input value={answer} maxLength={100} onChange={(event) => setAnswer(event.target.value)} className="mt-3 min-h-14 w-full rounded-2xl border border-stone-950/10 bg-white px-4 text-lg font-black outline-none" placeholder="Pizza" />
-              <button onClick={submitAnswer} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 font-black text-white"><Send size={18} /> Fold card</button>
-            </div>
-            {myCards.length > 0 && (
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {myCards.map((card, index) => (
-                  <PlayingCard key={card.id} text={`Card ${index + 1}`} subtext="Folded" folded tone={index} />
-                ))}
+            {room.status === "waiting" ? (
+              <div className="grid min-h-[17rem] place-items-center text-center">
+                <div>
+                  <Sparkles className="mx-auto text-[#f7d57a]" />
+                  <p className="mt-4 text-xl font-black text-[#f7f0d9]">The dealer will open the round soon.</p>
+                </div>
+              </div>
+            ) : room.status === "revealed" ? (
+              <div className="reveal-table-grid mt-5" aria-label="All face-up cards on the table">
+                {cardsWithPeople.map((card, index) => <PlayingCard key={card.id} text={card.text} subtext={`${card.participant.avatar} ${card.participant.displayName}`} tone={index} />)}
+                {cardsWithPeople.length === 0 && <p className="col-span-full grid min-h-44 place-items-center text-center font-bold text-[#e8d8ad]">No cards were dealt this round.</p>}
+              </div>
+            ) : (
+              <div className="table-card-grid mt-5" aria-label="Folded cards on the table">
+                {roundCards.map((card, index) => <CardBack key={card.id} index={index} />)}
+                {roundCards.length === 0 && <p className="col-span-full grid min-h-44 place-items-center text-center font-bold text-[#e8d8ad]">No cards yet. Be the first to fold one down.</p>}
               </div>
             )}
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2" aria-label="Players at the table">
+          {room.participants.map((person) => {
+            const count = roundCards.filter((card) => card.participantId === person.id).length;
+            return <span key={person.id} className="rounded-full border border-[#f7d57a]/25 bg-[#26130f]/75 px-3 py-2 text-sm font-bold text-[#f7f0d9]">{person.avatar} {person.displayName} · {count || "no cards"}</span>;
+          })}
+        </div>
+
+        {isHost && <DealerControls room={room} cards={roundCards.length} act={act} />}
+
+        {room.status === "writing" && (
+          <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
+            <div className="rounded-xl border border-[#f7d57a]/25 bg-[#24120e]/70 p-5 sm:p-6">
+              <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-[#f7d57a]">Your hand</p>
+              <h2 className="mt-2 max-w-xl text-3xl font-black leading-tight text-[#f7f0d9]">Write it on a card, then fold it onto the felt.</h2>
+              <p className="mt-3 max-w-xl text-[#e8d8ad]">The message stays hidden until the host reveals the round. Keep adding cards as long as you have ideas.</p>
+            </div>
+
+            <article ref={composerRef} className="playing-card relative min-h-[19rem] p-4 text-[#19100d] shadow-2xl">
+              <CardCorners tone={0} />
+              <div className="flex h-full flex-col rounded-md border border-[#19100d]/15 p-4">
+                <label className="text-center text-xs font-black uppercase tracking-[0.2em] text-[#9e1928]" htmlFor="answer">Your next card</label>
+                <textarea id="answer" value={answer} maxLength={100} onChange={(event) => setAnswer(event.target.value)} className="mt-5 min-h-24 flex-1 resize-none bg-transparent text-center font-display text-3xl font-black leading-tight outline-none placeholder:text-[#19100d]/35" placeholder="Write an idea" />
+                <button onClick={submitAnswer} disabled={!answer.trim() || isFolding} className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#9e1928] px-4 font-black text-[#fff9e9] transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">
+                  <FoldVertical size={18} /> {isFolding ? "Folding" : "Fold to table"}
+                </button>
+              </div>
+            </article>
+          </section>
         )}
 
         {room.status === "revealed" && (
-          <section ref={revealRef} className="mt-16">
-            <h2 className="text-5xl font-black leading-none">
-              {"Matches surfaced from the table.".split(" ").map((word) => <span key={word} className="scrub-word opacity-20">{word} </span>)}
-            </h2>
-            <div className="mt-8 space-y-4">
+          <section ref={revealRef} className="mt-12">
+            <div className="max-w-3xl">
+              <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-[#f7d57a]">Matching piles</p>
+              <h2 className="mt-3 font-display text-[clamp(2.5rem,6vw,4.75rem)] font-black leading-[0.92] text-[#f7f0d9]">
+                {"Here is where the ideas meet.".split(" ").map((word) => <span key={word} className="scrub-word opacity-20">{word} </span>)}
+              </h2>
+            </div>
+            <div className="mt-8 space-y-5">
               {groups.map((group, index) => (
-                <motion.article key={group.id} initial={{ rotateX: -80 }} animate={{ rotateX: 0 }} transition={{ delay: index * 0.08, type: "spring" }} className="reveal-card rounded-[2rem] border border-white/15 bg-white/[0.1] p-5 shadow-2xl">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-3xl font-black capitalize">{group.label}</h3>
-                    <span className="rounded-full bg-orange-500 px-3 py-1 text-sm font-black text-white">{group.cards.length}</span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    {group.cards.map((card, cardIndex) => <PlayingCard key={card.id} text={card.text} subtext={`${card.participant.avatar} ${card.participant.displayName}`} tone={cardIndex} />)}
+                <motion.article key={group.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08, type: "spring", stiffness: 180, damping: 20 }} className="reveal-card casino-table-rail min-w-0 p-3">
+                  <div className="casino-felt min-w-0 p-5 sm:p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="font-display text-3xl font-black capitalize text-[#f7f0d9]">{group.label}</h3>
+                      <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
+                    </div>
+                    <div className="match-card-grid mt-5">
+                      {group.cards.map((card, cardIndex) => <PlayingCard key={card.id} text={card.text} subtext={`${card.participant.avatar} ${card.participant.displayName}`} tone={cardIndex} />)}
+                    </div>
                   </div>
                 </motion.article>
               ))}
@@ -189,18 +242,33 @@ export default function RoomPage() {
           </section>
         )}
 
-        {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
+        {error && <p className="mt-4 rounded-lg border border-red-200/25 bg-red-950/55 p-3 text-sm text-red-100">{error}</p>}
       </section>
     </Shell>
   );
 }
 
+function DealerControls({ room, cards, act }: { room: Room; cards: number; act: (payload: Record<string, unknown>) => Promise<Room | null> }) {
+  return (
+    <section className="mt-6 rounded-xl border border-[#f7d57a]/25 bg-[#24120e]/70 p-5 sm:p-6">
+      <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-[#f7d57a]">Dealer controls</p>
+      <label className="mt-4 block text-sm font-bold text-[#e8d8ad]" htmlFor="prompt">Prompt</label>
+      <textarea id="prompt" disabled={room.status !== "waiting"} value={room.prompt} onChange={(event) => act({ action: "patch", patch: { prompt: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border border-[#f7d57a]/20 bg-[#f7f0d9] px-4 py-3 font-bold text-[#19100d] outline-none disabled:opacity-70" placeholder="Where should we eat tonight?" />
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button disabled={!room.prompt.trim() || room.status !== "waiting"} onClick={() => act({ action: "patch", patch: { status: "writing" } })} className="min-h-12 rounded-lg bg-[#f7d57a] font-black text-[#19100d] disabled:opacity-40">Deal</button>
+        <button disabled={!cards || room.status !== "writing"} onClick={() => act({ action: "patch", patch: { status: "revealed" } })} className="min-h-12 rounded-lg bg-[#9e1928] font-black text-[#fff9e9] disabled:opacity-40">Reveal</button>
+        <button onClick={() => act({ action: "patch", patch: { newRound: true } })} className="grid min-h-12 place-items-center rounded-lg border border-[#f7d57a]/35 text-[#f7f0d9] transition-colors hover:bg-[#3a1b13]" aria-label="Start a new round"><RefreshCw /></button>
+      </div>
+    </section>
+  );
+}
+
 function Shell({ code, children }: { code: string; children: React.ReactNode }) {
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-hidden text-stone-50">
-      <nav className="fixed left-1/2 top-4 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-full border border-white/15 bg-black/45 px-4 py-3 backdrop-blur-xl">
-        <a href="/" className="font-black">MatchDeck</a>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-stone-950">{code}</span>
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden text-[#f7f0d9]">
+      <nav className="table-nav fixed top-4 z-40 flex items-center justify-between border border-[#f7d57a]/30 bg-[#21110d]/85 px-4 py-3 shadow-2xl backdrop-blur-xl">
+        <a href="/" className="font-display font-black uppercase tracking-[0.16em] text-[#f7f0d9]">MatchDeck</a>
+        <span className="bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{code}</span>
       </nav>
       {children}
     </main>
@@ -210,33 +278,51 @@ function Shell({ code, children }: { code: string; children: React.ReactNode }) 
 function Message({ text }: { text: string }) {
   return (
     <section className="grid min-h-screen place-items-center px-5">
-      <div className="rounded-[2rem] border border-white/15 bg-black/35 p-6 text-center shadow-2xl backdrop-blur">
-        <Sparkles className="mx-auto text-orange-300" />
-        <p className="mt-4 text-2xl font-black">{text}</p>
-        <a className="mt-5 inline-grid min-h-12 place-items-center rounded-2xl bg-white px-5 font-black text-stone-950" href="/">Home</a>
+      <div className="casino-table-rail max-w-md p-3">
+        <div className="casino-felt p-7 text-center">
+          <Sparkles className="mx-auto text-[#f7d57a]" />
+          <p className="mt-4 text-2xl font-black text-[#f7f0d9]">{text}</p>
+          <a className="mt-5 inline-grid min-h-12 place-items-center rounded-lg bg-[#f7d57a] px-5 font-black text-[#19100d]" href="/">Home</a>
+        </div>
       </div>
     </section>
   );
 }
 
-function PlayingCard({ text, subtext, folded = false, tone = 0 }: { text: string; subtext: string; folded?: boolean; tone?: number }) {
-  const red = tone % 2 === 0;
+function CardBack({ index }: { index: number }) {
+  const rotations = [-5, 3, -2, 5, -4, 2, 4, -3];
   return (
-    <article className={`relative aspect-[5/7] overflow-hidden rounded-2xl border-2 bg-stone-50 p-3 text-stone-950 shadow-xl ${red ? "border-red-600" : "border-stone-950"} ${folded ? "folded" : ""}`}>
-      <div className={`absolute left-2 top-2 text-center font-black leading-none ${red ? "text-red-600" : "text-stone-950"}`}>
-        <div>A</div>
-        <div className="text-[0.55rem]">F</div>
+    <article className="card-back aspect-[5/7] min-w-0 shadow-xl transition-transform duration-500 hover:z-10 hover:scale-105" style={{ transform: `rotate(${rotations[index % rotations.length]}deg)` }} aria-label={`Folded card ${index + 1}`}>
+      <div className="card-back-inner grid h-full place-items-center">
+        <span className="font-display text-xl font-black tracking-[0.2em] text-[#f7d57a]">M</span>
       </div>
-      <div className={`absolute bottom-2 right-2 rotate-180 text-center font-black leading-none ${red ? "text-red-600" : "text-stone-950"}`}>
-        <div>A</div>
-        <div className="text-[0.55rem]">F</div>
-      </div>
-      <div className="grid h-full place-items-center rounded-xl border border-stone-950/10 bg-[radial-gradient(circle_at_center,rgba(251,146,60,.18),transparent_42%)] px-2 text-center">
+    </article>
+  );
+}
+
+function PlayingCard({ text, subtext, tone = 0 }: { text: string; subtext: string; tone?: number }) {
+  return (
+    <article className="playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl">
+      <CardCorners tone={tone} />
+      <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
         <div>
-          <p className={`text-[0.62rem] font-black uppercase tracking-[0.16em] ${red ? "text-red-700" : "text-stone-700"}`}>{subtext}</p>
-          <p className="mt-2 break-words text-2xl font-black leading-none">{text}</p>
+          <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#6c4a31]">{subtext}</p>
+          <p className="mt-3 break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
         </div>
       </div>
     </article>
+  );
+}
+
+function CardCorners({ tone }: { tone: number }) {
+  const suits = ["♠", "♥", "♣", "♦"];
+  const suit = suits[tone % suits.length];
+  const red = suit === "♥" || suit === "♦";
+  const color = red ? "text-[#9e1928]" : "text-[#19100d]";
+  return (
+    <>
+      <div className={`absolute left-3 top-2 text-center font-black leading-none ${color}`}><div>A</div><div className="text-sm">{suit}</div></div>
+      <div className={`absolute bottom-2 right-3 rotate-180 text-center font-black leading-none ${color}`}><div>A</div><div className="text-sm">{suit}</div></div>
+    </>
   );
 }
