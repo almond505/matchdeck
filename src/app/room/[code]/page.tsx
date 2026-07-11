@@ -6,9 +6,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Check, Copy, FoldVertical, RefreshCw, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { groupCards } from "@/lib/grouping";
 import { getSavedName, getSessionId, saveName } from "@/lib/session";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { CardWithParticipant, PublicParticipant, RoomView } from "@/types";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -43,26 +44,33 @@ export default function RoomPage() {
     setName(getSavedName());
   }, []);
 
+  const loadRoom = useCallback(async () => {
+    const res = await fetch(`/api/room?code=${code}`, {
+      cache: "no-store",
+      headers: sessionId ? { "X-MatchDeck-Session": sessionId } : undefined,
+    });
+    const body = await res.json();
+    if (res.ok) setRoom(body);
+    else setError(body.error ?? "Room not found.");
+  }, [code, sessionId]);
+
   useEffect(() => {
     if (!code) return;
-    let alive = true;
-    async function load() {
-      const res = await fetch(`/api/room?code=${code}`, {
-        cache: "no-store",
-        headers: sessionId ? { "X-MatchDeck-Session": sessionId } : undefined,
-      });
-      const body = await res.json();
-      if (!alive) return;
-      if (res.ok) setRoom(body);
-      else setError(body.error ?? "Room not found.");
-    }
-    load();
-    const timer = window.setInterval(load, 1200);
-    return () => {
-      alive = false;
-      window.clearInterval(timer);
-    };
-  }, [code, sessionId]);
+    void loadRoom();
+    const timer = window.setInterval(loadRoom, getSupabaseClient() ? 5000 : 1200);
+    return () => window.clearInterval(timer);
+  }, [code, loadRoom]);
+
+  useEffect(() => {
+    if (!room?.id) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const channel = supabase
+      .channel(`room-events-${room.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "room_events", filter: `room_id=eq.${room.id}` }, () => void loadRoom())
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadRoom, room?.id]);
 
   useEffect(() => {
     if (room?.status !== "revealed" || !revealRef.current) return;
