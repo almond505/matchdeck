@@ -1,6 +1,5 @@
 import { normalizeAnswer } from "@/lib/text-normalize";
 import { roomCode } from "@/lib/room-code";
-import { assertCardSubmissionAllowed } from "@/lib/store";
 import type { Card, Participant, Room, RoomStatus } from "@/types";
 import { getSupabaseServerClient } from "./server";
 
@@ -101,7 +100,7 @@ export async function submitCard(code: string, sessionId: string, text: string) 
   if (room.status !== "writing") throw new Error("Round is not accepting cards.");
   const clean = text.trim().slice(0, 100);
   if (!clean) throw new Error("Write something first.");
-  assertCardSubmissionAllowed(room.id, sessionId);
+  await consumeCardSubmission(room.id, sessionId);
   await write(client.from("cards").insert({
     room_id: room.id,
     participant_id: participant.id,
@@ -134,6 +133,14 @@ async function requiredHost(code: string, sessionId: string) {
 async function touchRoom(roomId: string) {
   const client = requiredClient();
   await write(client.from("rooms").update({ updated_at: new Date().toISOString() }).eq("id", roomId));
+}
+
+async function consumeCardSubmission(roomId: string, sessionId: string) {
+  const client = requiredClient();
+  const { error } = await client.rpc("consume_card_submission", { p_room_id: roomId, p_session_id: sessionId });
+  if (!error) return;
+  if (error.code === "P0001") throw new Error("Too many cards too quickly. Try again in a moment.");
+  unavailable();
 }
 
 async function write(request: PromiseLike<{ error: { code?: string } | null }>) {
