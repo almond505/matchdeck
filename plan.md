@@ -22,13 +22,14 @@ The original plan begins below. This status section is the current source of tru
 - Expired in-memory rooms are pruned on reads, mutations, and room creation, so stale data is not returned or retained after access.
 - Card submissions allow a burst of 12 folds per participant every 10 seconds, then resume automatically; rounds still allow unlimited cards over time.
 - Room-link sharing gives immediate copied feedback and reports a clipboard failure in the existing room error state.
-- Supabase SQL schema and client setup are present for future persistence.
-- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, and submission throttling. `npm run test`, `npm run check`, and a production build have passed during implementation.
+- Supabase persistence activates through a server-only service-role client when configured, with the in-memory store retained for local development without credentials.
+- Supabase Realtime watches a non-sensitive `room_events` revision and refetches the room API; folded-card text is never delivered through the browser subscription.
+- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, and the local persistence fallback. `npm run test`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
 
-- Runtime data currently lives in a small in-memory Next API store, not Supabase. Rooms reset when the server restarts.
-- Clients poll the room API every 1.2 seconds; there are no realtime subscriptions yet.
+- Runtime data uses Supabase when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set; otherwise it uses the in-memory local store and resets on restart.
+- Configured clients subscribe to safe room-event revisions for immediate refreshes and keep a five-second polling fallback; local mode polls every 1.2 seconds.
 - The API exposes a deliberately limited public room view. Browser session IDs remain bearer credentials held in local storage and sent only with the caller's request.
 - The local Git repository contains atomic commits for the casino-table interface, room secrecy, validation, expiry cleanup, and submission throttling.
 
@@ -36,7 +37,7 @@ The original plan begins below. This status section is the current source of tru
 
 #### Must Do Before Real Multi-Person Use
 
-1. Move the in-memory room store to Supabase/Postgres and add Supabase Realtime so room updates do not rely on polling.
+1. Create/configure a Supabase project, run `supabase/schema.sql`, set the public URL/anon key/service-role key, and exercise persistence plus Realtime against it.
 2. Add durable, distributed expiry cleanup and rate limiting alongside the persistent store; the current safeguards are process-local.
 3. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
 4. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
