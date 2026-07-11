@@ -3,7 +3,7 @@
 import confetti from "canvas-confetti";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Copy, FoldVertical, RefreshCw, Sparkles } from "lucide-react";
+import { Check, Copy, FoldVertical, RefreshCw, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +22,7 @@ export default function RoomPage() {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [isFolding, setIsFolding] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const revealRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLElement>(null);
 
@@ -118,6 +119,15 @@ export default function RoomPage() {
     setIsFolding(false);
   }
 
+  async function copyRoomLink() {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setLinkCopied(true);
+    } catch {
+      setError("Could not copy the table link.");
+    }
+  }
+
   if (error && !room) return <Shell code={code}><Message text={error} /></Shell>;
   if (!room) return <Shell code={code}><Message text="Setting the table." /></Shell>;
 
@@ -156,8 +166,8 @@ export default function RoomPage() {
             <p className="font-display text-xs font-black uppercase tracking-[0.26em] text-[#f7d57a]">Round {room.roundNumber} · {room.status}</p>
             <h1 className="mt-2 max-w-4xl font-display text-[clamp(2.4rem,6vw,5.5rem)] font-black leading-[0.92] text-[#f7f0d9]">{room.prompt || "The dealer is choosing a prompt."}</h1>
           </div>
-          <button onClick={() => navigator.clipboard?.writeText(location.href)} className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-4 font-bold text-[#f7f0d9] transition-colors hover:bg-[#3a1b13]" aria-label="Copy room link">
-            <Copy size={18} /> Copy table
+          <button onClick={copyRoomLink} className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-4 font-bold text-[#f7f0d9] transition-colors hover:bg-[#3a1b13]" aria-label={linkCopied ? "Room link copied" : "Copy room link"}>
+            {linkCopied ? <Check size={18} /> : <Copy size={18} />} {linkCopied ? "Copied" : "Copy table"}
           </button>
         </header>
 
