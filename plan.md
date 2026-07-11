@@ -25,13 +25,14 @@ The original plan begins below. This status section is the current source of tru
 - Supabase persistence activates through a server-only service-role client when configured, with the in-memory store retained for local development without credentials.
 - Supabase Realtime watches a non-sensitive `room_events` revision and refetches the room API; folded-card text is never delivered through the browser subscription.
 - Configured Supabase deployments enforce the card burst limit atomically in Postgres and purge expired rooms before creating a new room.
-- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, and the local persistence fallback. `npm run test`, `npm run check`, and a production build have passed during implementation.
+- A `pg_cron` job definition removes expired rooms hourly after the extension is enabled in Supabase.
+- Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, the local persistence fallback, and a Chrome host/join/fold/reveal lifecycle. `npm run test`, `npm run test:e2e`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
 
 - Runtime data uses Supabase when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set; otherwise it uses the in-memory local store and resets on restart.
 - Configured clients subscribe to safe room-event revisions for immediate refreshes and keep a five-second polling fallback; local mode polls every 1.2 seconds.
-- The Supabase cleanup routine runs when a new room is created; rooms read after expiry are deleted immediately. Long-idle cleanup still needs a scheduled job.
+- The Supabase cleanup routine runs when a new room is created; rooms read after expiry are deleted immediately. `supabase/cron.sql` schedules hourly long-idle cleanup after `pg_cron` is enabled.
 - The API exposes a deliberately limited public room view. Browser session IDs remain bearer credentials held in local storage and sent only with the caller's request.
 - The local Git repository contains atomic commits for the casino-table interface, room secrecy, validation, persistence, Realtime, expiry cleanup, and submission throttling.
 
@@ -40,8 +41,8 @@ The original plan begins below. This status section is the current source of tru
 #### Must Do Before Real Multi-Person Use
 
 1. Create/configure a Supabase project, run `supabase/schema.sql`, set the public URL/anon key/service-role key, and exercise persistence plus Realtime against it.
-2. Configure a scheduled Supabase cleanup job for rooms that expire during long idle periods, then verify the shared Postgres rate limit under concurrent clients.
-3. Add end-to-end browser tests for create, join, multiple submissions, reveal, grouping, and new-round flows.
+2. Enable `pg_cron` and run `supabase/cron.sql` in the configured project, then verify the shared Postgres rate limit under concurrent clients.
+3. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds.
 4. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
 #### Next UX Improvements
