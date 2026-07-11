@@ -42,7 +42,7 @@ function required(value: unknown, label: string, maxLength: number) {
 
 function validRoomCode(value: unknown) {
   const code = required(value, "Room code", MAX.roomCode).toUpperCase();
-  if (!/^[A-Z]{5}[1-9]$/.test(code)) throw new Error("Room code invalid.");
+  if (!/^[A-Z]{4,5}[1-9]$/.test(code)) throw new Error("Room code invalid.");
   return code;
 }
 

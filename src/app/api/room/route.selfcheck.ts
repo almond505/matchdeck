@@ -10,6 +10,9 @@ async function post(body: Record<string, unknown>) {
 }
 
 async function run() {
+  const tacoCode = await GET(new Request("http://localhost/api/room?code=TACO1"));
+  assert.equal(tacoCode.status, 404);
+
   const created = await post({ action: "create", sessionId: "host-redaction" });
   const room = await created.json();
 
