@@ -37,6 +37,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 Run `supabase/schema.sql` in Supabase SQL editor.
+Enable the `pg_cron` extension in Supabase Dashboard, then run `supabase/cron.sql` to clean expired rooms hourly.
 
 ## Current Limitation
 
