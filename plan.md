@@ -1,6 +1,6 @@
 # plan.md — MatchDeck Mobile Web App Implementation Plan
 
-## Implementation Status — 2026-07-10
+## Implementation Status — 2026-07-11
 
 The original plan begins below. This status section is the current source of truth for work completed in the repository and the remaining MVP backlog.
 
@@ -26,6 +26,8 @@ The original plan begins below. This status section is the current source of tru
 - Supabase Realtime watches a non-sensitive `room_events` revision and refetches the room API; folded-card text is never delivered through the browser subscription.
 - Configured Supabase deployments enforce the card burst limit atomically in Postgres and purge expired rooms before creating a new room.
 - A `pg_cron` job definition removes expired rooms hourly after the extension is enabled in Supabase.
+- The MatchDeck Supabase project has the schema and hourly cleanup schedule applied. Local credentials are configured in ignored `.env.local`.
+- `npm run test:supabase` creates a disposable room and verifies persistence, an anon Realtime event, and 13 concurrent Postgres submission attempts (expecting 12 accepted and 1 rate-limited).
 - Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, the local persistence fallback, and a Chrome host/join/fold/reveal lifecycle. `npm run test`, `npm run test:e2e`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
@@ -40,10 +42,11 @@ The original plan begins below. This status section is the current source of tru
 
 #### Must Do Before Real Multi-Person Use
 
-1. Create/configure a Supabase project, run `supabase/schema.sql`, set the public URL/anon key/service-role key, and exercise persistence plus Realtime against it.
-2. Enable `pg_cron` and run `supabase/cron.sql` in the configured project, then verify the shared Postgres rate limit under concurrent clients.
-3. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds.
-4. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
+1. Apply the grant statements at the end of `supabase/schema.sql` to the MatchDeck project. This is the exact next step: the project currently returns `permission denied for table rooms` to the service-role live verifier.
+2. Run `npm run test:supabase` with live network access; it proves persistence, Realtime, and the atomic 12-per-10-second Postgres limit.
+3. Run `npm run test:e2e` with the configured Supabase environment to verify the browser host/join/fold/reveal path against the real project.
+4. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds.
+5. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
 #### Next UX Improvements
 
