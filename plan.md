@@ -30,6 +30,7 @@ The original plan begins below. This status section is the current source of tru
 - `npm run test:supabase` passed against the real project: it created a disposable room, verified persistence and an anon Realtime event, then accepted 12 of 13 concurrent Postgres submissions and rate-limited the thirteenth.
 - `npm run test:e2e` passed against the configured project, covering host creation, guest join, folding, and reveal.
 - The production Vercel deployment is configured as Next.js and builds successfully at `https://matchdeck-tawny.vercel.app`.
+- Vercel Production has the required Supabase variables, and a public create-and-read probe confirmed that a new room persists across requests.
 - Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, the local persistence fallback, and a Chrome host/join/fold/reveal lifecycle. `npm run test`, `npm run test:e2e`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
@@ -44,9 +45,8 @@ The original plan begins below. This status section is the current source of tru
 
 #### Must Do Before Real Multi-Person Use
 
-1. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to Vercel Production before sharing the app. This is the exact next step.
-2. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds.
-3. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
+1. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds. This is the exact next step.
+2. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
 #### Next UX Improvements
 
