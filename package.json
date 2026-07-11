@@ -6,7 +6,8 @@
     "build": "next build",
     "check": "tsc --noEmit",
     "test": "node --import tsx src/lib/grouping.selfcheck.ts && node --import tsx src/lib/store.selfcheck.ts && node --import tsx src/app/api/room/route.selfcheck.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:supabase": "node --import tsx scripts/verify-supabase.ts"
   },
   "dependencies": {
     "@gsap/react": "latest",
