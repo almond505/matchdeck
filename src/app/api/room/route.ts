@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createRoom, getRoom, joinRoom, patchRoom, submitCard } from "@/lib/store";
+import * as memoryStore from "@/lib/store";
+import * as supabaseStore from "@/lib/supabase/room-store";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Room, RoomStatus, RoomView } from "@/types";
 
 const ROOM_STATUSES: RoomStatus[] = ["waiting", "writing", "revealed"];
@@ -13,7 +15,7 @@ export async function GET(request: Request) {
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Room code invalid.", 400);
   }
-  const room = getRoom(roomCode);
+  const room = await roomStore().getRoom(roomCode);
   return room ? roomResponse(room, request.headers.get("X-MatchDeck-Session") ?? undefined) : jsonError("Room not found.", 404);
 }
 
@@ -22,11 +24,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     if (!isRecord(body)) throw new Error("Request body must be an object.");
     const sessionId = required(body.sessionId, "Session", MAX.sessionId);
-    if (body.action === "create") return roomResponse(createRoom(sessionId), sessionId);
+    if (body.action === "create") return roomResponse(await roomStore().createRoom(sessionId), sessionId);
     const roomCode = validRoomCode(body.code);
-    if (body.action === "join") return roomResponse(joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)), sessionId);
-    if (body.action === "patch") return roomResponse(patchRoom(roomCode, sessionId, validPatch(body.patch)), sessionId);
-    if (body.action === "submit") return roomResponse(submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)), sessionId);
+    if (body.action === "join") return roomResponse(await roomStore().joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)), sessionId);
+    if (body.action === "patch") return roomResponse(await roomStore().patchRoom(roomCode, sessionId, validPatch(body.patch)), sessionId);
+    if (body.action === "submit") return roomResponse(await roomStore().submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)), sessionId);
     return jsonError("Unknown action.", 400);
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Something went wrong.", 400);
@@ -68,6 +70,10 @@ function validPatch(value: unknown): { prompt?: string; status?: RoomStatus; new
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function roomStore() {
+  return getSupabaseServerClient() ? supabaseStore : memoryStore;
 }
 
 function jsonError(message: string, status: number) {

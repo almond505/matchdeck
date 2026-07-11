@@ -128,7 +128,7 @@ function pruneExpiredRooms() {
   }
 }
 
-function assertCardSubmissionAllowed(roomId: string, sessionId: string) {
+export function assertCardSubmissionAllowed(roomId: string, sessionId: string) {
   const currentTime = Date.now();
   for (const [key, window] of cardSubmissionWindows) {
     if (window.resetsAt <= currentTime) cardSubmissionWindows.delete(key);
