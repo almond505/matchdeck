@@ -141,6 +141,7 @@ after insert or update or delete on cards
 for each row execute function touch_room_event_from_child();
 
 alter publication supabase_realtime add table room_events;
+alter table room_events replica identity full;
 
 grant usage on schema public to anon, service_role;
 grant all on table rooms, participants, cards, card_submission_limits, room_events to service_role;

@@ -26,8 +26,9 @@ The original plan begins below. This status section is the current source of tru
 - Supabase Realtime watches a non-sensitive `room_events` revision and refetches the room API; folded-card text is never delivered through the browser subscription.
 - Configured Supabase deployments enforce the card burst limit atomically in Postgres and purge expired rooms before creating a new room.
 - A `pg_cron` job definition removes expired rooms hourly after the extension is enabled in Supabase.
-- The MatchDeck Supabase project has the schema and hourly cleanup schedule applied. Local credentials are configured in ignored `.env.local`.
-- `npm run test:supabase` creates a disposable room and verifies persistence, an anon Realtime event, and 13 concurrent Postgres submission attempts (expecting 12 accepted and 1 rate-limited).
+- The MatchDeck Supabase project has the schema, full Realtime replica identity for `room_events`, and hourly cleanup schedule applied. Local credentials are configured in ignored `.env.local`.
+- `npm run test:supabase` passed against the real project: it created a disposable room, verified persistence and an anon Realtime event, then accepted 12 of 13 concurrent Postgres submissions and rate-limited the thirteenth.
+- `npm run test:e2e` passed against the configured project, covering host creation, guest join, folding, and reveal.
 - Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, the local persistence fallback, and a Chrome host/join/fold/reveal lifecycle. `npm run test`, `npm run test:e2e`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
@@ -42,11 +43,8 @@ The original plan begins below. This status section is the current source of tru
 
 #### Must Do Before Real Multi-Person Use
 
-1. Apply the grant statements at the end of `supabase/schema.sql` to the MatchDeck project. This is the exact next step: the project currently returns `permission denied for table rooms` to the service-role live verifier.
-2. Run `npm run test:supabase` with live network access; it proves persistence, Realtime, and the atomic 12-per-10-second Postgres limit.
-3. Run `npm run test:e2e` with the configured Supabase environment to verify the browser host/join/fold/reveal path against the real project.
-4. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds.
-5. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
+1. Extend the Chrome lifecycle test to cover multiple submissions, grouping, and new rounds. This is the exact next step.
+2. Verify the room flow on mobile Safari, mobile Chrome, tablet, and desktop with keyboard-only navigation.
 
 #### Next UX Improvements
 
