@@ -42,6 +42,7 @@ type DbRoom = {
 
 export async function createRoom(hostSessionId: string) {
   const client = requiredClient();
+  await write(client.rpc("cleanup_expired_rooms"));
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const code = roomCode();
     const { data, error } = await client.from("rooms").insert({ room_code: code, host_session_id: hostSessionId }).select("*, participants(*), cards(*)").single();

@@ -87,6 +87,17 @@ begin
 end;
 $$;
 
+create or replace function cleanup_expired_rooms()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from rooms where expires_at <= now();
+end;
+$$;
+
 create or replace function touch_room_event_from_room()
 returns trigger
 language plpgsql
