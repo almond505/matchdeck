@@ -214,7 +214,7 @@ export default function RoomPage() {
           })}
         </div>
 
-        {isHost && <DealerControls room={room} cards={roundCards.length} act={act} />}
+        {isHost && <DealerControls key={`${room.id}-${room.roundNumber}`} room={room} cards={roundCards.length} act={act} />}
 
         {room.status === "writing" && (
           <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
@@ -270,13 +270,15 @@ export default function RoomPage() {
 }
 
 function DealerControls({ room, cards, act }: { room: RoomView; cards: number; act: (payload: Record<string, unknown>) => Promise<RoomView | null> }) {
+  const [prompt, setPrompt] = useState(room.prompt);
+
   return (
     <section className="mt-6 rounded-xl border border-[#f7d57a]/25 bg-[#24120e]/70 p-5 sm:p-6">
       <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-[#f7d57a]">Dealer controls</p>
       <label className="mt-4 block text-sm font-bold text-[#e8d8ad]" htmlFor="prompt">Prompt</label>
-      <textarea id="prompt" disabled={room.status !== "waiting"} value={room.prompt} onChange={(event) => act({ action: "patch", patch: { prompt: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border border-[#f7d57a]/20 bg-[#f7f0d9] px-4 py-3 font-bold text-[#19100d] outline-none disabled:opacity-70" placeholder="Where should we eat tonight?" />
+      <textarea id="prompt" disabled={room.status !== "waiting"} value={prompt} onChange={(event) => setPrompt(event.target.value)} className="mt-2 min-h-24 w-full rounded-lg border border-[#f7d57a]/20 bg-[#f7f0d9] px-4 py-3 font-bold text-[#19100d] outline-none disabled:opacity-70" placeholder="Where should we eat tonight?" />
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <button disabled={!room.prompt.trim() || room.status !== "waiting"} onClick={() => act({ action: "patch", patch: { status: "writing" } })} className="min-h-12 rounded-lg bg-[#f7d57a] font-black text-[#19100d] disabled:opacity-40">Deal</button>
+        <button disabled={!prompt.trim() || room.status !== "waiting"} onClick={() => act({ action: "patch", patch: { prompt, status: "writing" } })} className="min-h-12 rounded-lg bg-[#f7d57a] font-black text-[#19100d] disabled:opacity-40">Deal</button>
         <button disabled={!cards || room.status !== "writing"} onClick={() => act({ action: "patch", patch: { status: "revealed" } })} className="min-h-12 rounded-lg bg-[#9e1928] font-black text-[#fff9e9] disabled:opacity-40">Reveal</button>
         <button onClick={() => act({ action: "patch", patch: { newRound: true } })} className="grid min-h-12 place-items-center rounded-lg border border-[#f7d57a]/35 text-[#f7f0d9] transition-colors hover:bg-[#3a1b13]" aria-label="Start a new round"><RefreshCw /></button>
       </div>

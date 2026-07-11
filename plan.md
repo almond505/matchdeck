@@ -31,6 +31,7 @@ The original plan begins below. This status section is the current source of tru
 - `npm run test:e2e` passed against the configured project, covering host creation, guest join, folding, and reveal.
 - The production Vercel deployment is configured as Next.js and builds successfully at `https://matchdeck-tawny.vercel.app`.
 - Vercel Production has the required Supabase variables, and a public create-and-read probe confirmed that a new room persists across requests.
+- Dealer prompt editing stays local until **Deal** is pressed, avoiding a Supabase request on every keystroke.
 - Automated checks cover grouping, multi-card storage, room response redaction, public identity projection, generated room-code validation, input validation, expiry, submission throttling, the local persistence fallback, and a Chrome host/join/fold/reveal lifecycle. `npm run test`, `npm run test:e2e`, `npm run check`, and a production build have passed during implementation.
 
 ### Current Technical Shape
