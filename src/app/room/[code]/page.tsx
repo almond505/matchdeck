@@ -128,6 +128,12 @@ export default function RoomPage() {
     setIsFolding(false);
   }
 
+  async function voteForGroup(groupId: string) {
+    if (await act({ action: "vote", groupId })) {
+      confetti({ particleCount: 40, spread: 55, origin: { y: 0.62 }, colors: ["#62e7ef", "#f7d57a", "#9e1928"] });
+    }
+  }
+
   async function copyRoomLink() {
     try {
       await navigator.clipboard.writeText(location.href);
@@ -254,11 +260,14 @@ export default function RoomPage() {
                       <h3 className="font-display text-3xl font-black capitalize text-[#f7f0d9]">{group.label}</h3>
                       <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
                     </div>
-                    <div className="match-card-grid mt-5">
+                    <div className="relative mt-5">
+                      <div className="match-card-grid">
                       {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
-                    </div>
-                    <div className="mt-6 flex justify-center">
-                      <button type="button" onClick={() => act({ action: "vote", groupId: group.id })} aria-label={`Vote for ${group.label} group; ${room.voteCounts[group.id] ?? 0} ${(room.voteCounts[group.id] ?? 0) === 1 ? "vote" : "votes"}`} aria-pressed={room.viewer.votedGroupId === group.id} className="min-h-12 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-8 font-black text-[#f7f0d9] transition-colors hover:bg-[#3a1b13] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]">{room.viewer.votedGroupId === group.id ? "Your vote" : "Vote"} · {room.voteCounts[group.id] ?? 0}</button>
+                      </div>
+                      <div className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+                        <span aria-hidden="true" className="grid h-[120px] w-[120px] place-items-center rounded-full border-[6px] border-[#f7f0d9] bg-[#19100d] text-3xl font-black text-[#19100d] shadow-[0_9px_0_#9e1928]"><span className="grid h-[60px] w-[60px] place-items-center rounded-full bg-[#f7f0d9]">{room.voteCounts[group.id] ?? 0}</span></span>
+                        <button type="button" onClick={() => voteForGroup(group.id)} aria-label={`Vote for ${group.label} group; ${room.voteCounts[group.id] ?? 0} ${(room.voteCounts[group.id] ?? 0) === 1 ? "vote" : "votes"}`} aria-pressed={room.viewer.votedGroupId === group.id} className="min-h-14 whitespace-nowrap rounded-full border-2 border-[#f7d57a] bg-[#62e7ef] px-9 font-display text-xl font-black text-[#19100d] shadow-[0_8px_0_#9e1928,0_0_28px_rgba(98,231,239,0.7)] transition-transform duration-200 hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#fff1b8]">{room.viewer.votedGroupId === group.id ? "Voted" : "Tap to Vote"}</button>
+                      </div>
                     </div>
                   </div>
                 </motion.article>

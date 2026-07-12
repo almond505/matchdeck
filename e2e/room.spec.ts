@@ -27,6 +27,7 @@ test("participants vote after reveal", async ({ browser }) => {
   await hostPage.getByRole("button", { name: "Reveal" }).click();
   await expect(guestPage.getByLabel("All face-up cards on the table")).toContainText("Pattaya", { timeout: 10_000 });
   await guestPage.getByRole("button", { name: "Vote for pattaya group; 0 votes" }).click();
+  await expect(guestPage.getByText("Voted", { exact: true })).toBeVisible();
   await expect(hostPage.getByRole("button", { name: "Vote for pattaya group; 1 vote" })).toBeVisible({ timeout: 10_000 });
 
   const late = await browser.newContext();
