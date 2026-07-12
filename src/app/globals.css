@@ -91,7 +91,6 @@ textarea {
 }
 
 .casino-felt > * {
-  position: relative;
   z-index: 1;
 }
 

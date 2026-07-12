@@ -114,9 +114,9 @@ function HomeTable() {
     <div className="casino-table-rail p-3 shadow-2xl">
       <div className="casino-felt min-h-[25rem] p-5 sm:min-h-[31rem]">
         <p className="text-center font-display text-xs font-black uppercase tracking-[0.24em] text-[#f7d57a]">MatchDeck table</p>
-        <div className="absolute left-[12%] top-[25%] h-[45%] w-[26%] rotate-[-10deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
-        <div className="absolute left-[38%] top-[18%] h-[49%] w-[29%] rotate-[5deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
-        <div className="absolute right-[10%] top-[31%] h-[42%] w-[25%] rotate-[13deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="card-back absolute left-[12%] top-[25%] aspect-[5/7] w-[26%] rotate-[-10deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="card-back absolute left-[38%] top-[18%] aspect-[5/7] w-[29%] rotate-[5deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="card-back absolute right-[10%] top-[31%] aspect-[5/7] w-[25%] rotate-[13deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
         <p className="absolute inset-x-6 bottom-6 text-center font-display text-2xl font-black text-[#f7f0d9]">Ideas on the felt.</p>
       </div>
     </div>
