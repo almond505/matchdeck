@@ -252,13 +252,13 @@ export default function RoomPage() {
                   <div className="casino-felt min-w-0 p-5 sm:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="font-display text-3xl font-black capitalize text-[#f7f0d9]">{group.label}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
-                        <button type="button" onClick={() => act({ action: "vote", groupId: group.id })} aria-label={`Vote for ${group.label} group; ${room.voteCounts[group.id] ?? 0} ${(room.voteCounts[group.id] ?? 0) === 1 ? "vote" : "votes"}`} aria-pressed={room.viewer.votedGroupId === group.id} className="min-h-10 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-3 text-sm font-black text-[#f7f0d9] transition-colors hover:bg-[#3a1b13] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]">{room.viewer.votedGroupId === group.id ? "Your vote" : "Vote"} · {room.voteCounts[group.id] ?? 0}</button>
-                      </div>
+                      <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
                     </div>
                     <div className="match-card-grid mt-5">
                       {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
+                    </div>
+                    <div className="mt-6 flex justify-center">
+                      <button type="button" onClick={() => act({ action: "vote", groupId: group.id })} aria-label={`Vote for ${group.label} group; ${room.voteCounts[group.id] ?? 0} ${(room.voteCounts[group.id] ?? 0) === 1 ? "vote" : "votes"}`} aria-pressed={room.viewer.votedGroupId === group.id} className="min-h-12 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-8 font-black text-[#f7f0d9] transition-colors hover:bg-[#3a1b13] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]">{room.viewer.votedGroupId === group.id ? "Your vote" : "Vote"} · {room.voteCounts[group.id] ?? 0}</button>
                     </div>
                   </div>
                 </motion.article>

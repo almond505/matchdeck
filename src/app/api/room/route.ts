@@ -90,11 +90,11 @@ function roomResponse(room: Room, viewerSessionId?: string) {
   const response: RoomView = {
     ...publicRoom,
     participants: participants.map(({ sessionId: _, ...participant }) => participant),
-    voteCounts: Object.fromEntries(groups.map((group) => [group.id, roundVotes.filter((vote) => vote.groupId === group.id).length])),
+    voteCounts: Object.fromEntries(groups.map((group) => [group.id, roundVotes.filter((vote) => group.cards.some((card) => card.id === vote.cardId)).length])),
     cards: room.status === "revealed"
       ? room.cards
       : room.cards.map((card) => ({ ...card, text: "", normalizedText: "" })),
-    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId, votedGroupId: roundVotes.find((vote) => vote.participantId === viewer?.id)?.groupId },
+    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId, votedGroupId: groups.find((group) => group.cards.some((card) => card.id === roundVotes.find((vote) => vote.participantId === viewer?.id)?.cardId))?.id },
   };
   return NextResponse.json(response);
 }

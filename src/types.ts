@@ -25,7 +25,7 @@ export type Card = {
 export type Vote = {
   roomId: string;
   participantId: string;
-  groupId: string;
+  cardId: string;
   roundNumber: number;
 };
 

@@ -121,9 +121,10 @@ export function voteForGroup(code: string, sessionId: string, groupId: string) {
   const participant = room.participants.find((item) => item.sessionId === sessionId);
   if (!participant) throw new Error("Join room before voting.");
   if (room.status !== "revealed") throw new Error("Voting opens after reveal.");
-  if (!groupRoundCards(room).some((group) => group.id === groupId)) throw new Error("Group is not in the current round.");
+  const group = groupRoundCards(room).find((item) => item.id === groupId);
+  if (!group) throw new Error("Group is not in the current round.");
   room.votes = room.votes.filter((vote) => vote.participantId !== participant.id || vote.roundNumber !== room.roundNumber);
-  room.votes.push({ roomId: room.id, participantId: participant.id, groupId, roundNumber: room.roundNumber });
+  room.votes.push({ roomId: room.id, participantId: participant.id, cardId: group.cards[0].id, roundNumber: room.roundNumber });
   room.updatedAt = now();
   return publicRoom(room);
 }

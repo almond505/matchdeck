@@ -11,8 +11,8 @@ const updated = submitCard(room.roomCode, "host-unlimited", "Sushi");
 assert.equal(updated.cards.length, 2);
 
 patchRoom(room.roomCode, "host-unlimited", { status: "revealed" });
-assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[0].id).votes[0].groupId, updated.cards[0].id);
-assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[1].id).votes[0].groupId, updated.cards[1].id);
+assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[0].id).votes[0].cardId, updated.cards[0].id);
+assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[1].id).votes[0].cardId, updated.cards[1].id);
 assert.throws(() => voteForGroup(room.roomCode, "stranger", updated.cards[0].id), /Join room before voting/);
 patchRoom(room.roomCode, "host-unlimited", { newRound: true });
 assert.throws(() => voteForGroup(room.roomCode, "host-unlimited", updated.cards[0].id), /Voting opens after reveal/);
@@ -26,7 +26,7 @@ submitCard(groupedRoom.roomCode, "guest-grouped", "Pizzas");
 patchRoom(groupedRoom.roomCode, "host-grouped", { status: "revealed" });
 const grouped = groupRoundCards(getRoom(groupedRoom.roomCode)!)[0];
 assert.equal(grouped.cards.length, 2);
-assert.equal(voteForGroup(groupedRoom.roomCode, "guest-grouped", grouped.id).votes[0].groupId, grouped.id);
+assert.equal(voteForGroup(groupedRoom.roomCode, "guest-grouped", grouped.id).votes[0].cardId, grouped.cards[0].id);
 
 const identityRoom = createRoom("host-identities");
 const firstIdentity = joinRoom(identityRoom.roomCode, "host-identities", "First");

@@ -11,6 +11,8 @@ test("participants vote after reveal", async ({ browser }) => {
   await expect(hostPage.getByText("Dealer controls")).toBeVisible();
   await hostPage.getByLabel("Prompt").fill("Where should we eat?");
   await hostPage.getByRole("button", { name: "Deal" }).click();
+  await hostPage.getByLabel("Your next card").fill("Pattaya");
+  await hostPage.getByRole("button", { name: "Fold to table" }).click();
 
   const guest = await browser.newContext();
   const guestPage = await guest.newPage();
@@ -18,22 +20,22 @@ test("participants vote after reveal", async ({ browser }) => {
   await guestPage.getByLabel("Display name").fill("Guest");
   await guestPage.getByRole("button", { name: "Take a seat" }).click();
   await expect(guestPage.getByLabel("Players at the table")).toContainText("K♠ Guest");
-  await guestPage.getByLabel("Your next card").fill("Pizza");
+  await guestPage.getByLabel("Your next card").fill("pattaya");
   await guestPage.getByRole("button", { name: "Fold to table" }).click();
 
   await expect(hostPage.getByRole("button", { name: "Reveal" })).toBeEnabled({ timeout: 10_000 });
   await hostPage.getByRole("button", { name: "Reveal" }).click();
-  await expect(guestPage.getByLabel("All face-up cards on the table")).toContainText("Pizza", { timeout: 10_000 });
-  await guestPage.getByRole("button", { name: "Vote for pizza group; 0 votes" }).click();
-  await expect(hostPage.getByRole("button", { name: "Vote for pizza group; 1 vote" })).toBeVisible({ timeout: 10_000 });
+  await expect(guestPage.getByLabel("All face-up cards on the table")).toContainText("Pattaya", { timeout: 10_000 });
+  await guestPage.getByRole("button", { name: "Vote for pattaya group; 0 votes" }).click();
+  await expect(hostPage.getByRole("button", { name: "Vote for pattaya group; 1 vote" })).toBeVisible({ timeout: 10_000 });
 
   const late = await browser.newContext();
   const latePage = await late.newPage();
   await latePage.goto(hostPage.url());
   await latePage.getByLabel("Display name").fill("Late guest");
   await latePage.getByRole("button", { name: "Take a seat" }).click();
-  await latePage.getByRole("button", { name: "Vote for pizza group; 1 vote" }).click();
-  await expect(hostPage.getByRole("button", { name: "Vote for pizza group; 2 votes" })).toBeVisible({ timeout: 10_000 });
+  await latePage.getByRole("button", { name: "Vote for pattaya group; 1 vote" }).click();
+  await expect(hostPage.getByRole("button", { name: "Vote for pattaya group; 2 votes" })).toBeVisible({ timeout: 10_000 });
 
   await late.close();
   await guest.close();

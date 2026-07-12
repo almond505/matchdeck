@@ -39,7 +39,7 @@ type DbRoom = {
   expires_at: string;
   participants?: DbParticipant[];
   cards?: DbCard[];
-  votes?: { room_id: string; participant_id: string; group_id: string; round_number: number }[];
+  votes?: { room_id: string; participant_id: string; card_id: string; round_number: number }[];
 };
 
 export async function createRoom(hostSessionId: string) {
@@ -127,7 +127,6 @@ export async function voteForGroup(code: string, sessionId: string, groupId: str
     room_id: room.id,
     participant_id: participant.id,
     card_id: group.cards[0].id,
-    group_id: group.id,
     round_number: room.roundNumber,
   }, { onConflict: "room_id,round_number,participant_id" }));
   await touchRoom(room.id);
@@ -199,7 +198,7 @@ function toRoom(row: DbRoom): Room {
 }
 
 function toVote(row: NonNullable<DbRoom["votes"]>[number]): Vote {
-  return { roomId: row.room_id, participantId: row.participant_id, groupId: row.group_id, roundNumber: row.round_number };
+  return { roomId: row.room_id, participantId: row.participant_id, cardId: row.card_id, roundNumber: row.round_number };
 }
 
 function toParticipant(row: DbParticipant): Participant {
