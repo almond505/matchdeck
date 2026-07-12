@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createRoom, getRoom, joinRoom, patchRoom, submitCard } from "./store";
+import { createRoom, getRoom, joinRoom, patchRoom, submitCard, voteForCard } from "./store";
 
 const room = createRoom("host-unlimited");
 joinRoom(room.roomCode, "host-unlimited", "Host");
@@ -8,6 +8,13 @@ submitCard(room.roomCode, "host-unlimited", "Pizza");
 const updated = submitCard(room.roomCode, "host-unlimited", "Sushi");
 
 assert.equal(updated.cards.length, 2);
+
+patchRoom(room.roomCode, "host-unlimited", { status: "revealed" });
+assert.equal(voteForCard(room.roomCode, "host-unlimited", updated.cards[0].id).votes[0].cardId, updated.cards[0].id);
+assert.equal(voteForCard(room.roomCode, "host-unlimited", updated.cards[1].id).votes[0].cardId, updated.cards[1].id);
+assert.throws(() => voteForCard(room.roomCode, "stranger", updated.cards[0].id), /Join room before voting/);
+patchRoom(room.roomCode, "host-unlimited", { newRound: true });
+assert.throws(() => voteForCard(room.roomCode, "host-unlimited", updated.cards[0].id), /Voting opens after reveal/);
 
 const identityRoom = createRoom("host-identities");
 const firstIdentity = joinRoom(identityRoom.roomCode, "host-identities", "First");

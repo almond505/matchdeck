@@ -40,6 +40,15 @@ async function run() {
   const revealed = await GET(new Request(`http://localhost/api/room?code=${room.roomCode}`));
   const revealedRoom = await revealed.json();
   assert.equal(revealedRoom.cards[0].text, "Secret pizza");
+  assert.equal("votes" in revealedRoom, false);
+
+  const voted = await post({ action: "vote", code: room.roomCode, sessionId: "guest-redaction", cardId: revealedRoom.cards[0].id });
+  const votedRoom = await voted.json();
+  assert.equal(votedRoom.voteCounts[revealedRoom.cards[0].id], 1);
+  assert.equal(votedRoom.viewer.votedCardId, revealedRoom.cards[0].id);
+
+  const invalidVote = await post({ action: "vote", code: room.roomCode, sessionId: "guest-redaction", cardId: crypto.randomUUID() });
+  assert.equal(invalidVote.status, 400);
 
   const oversizedName = await post({ action: "join", code: room.roomCode, sessionId: "guest-validation", displayName: "a".repeat(33) });
   assert.equal(oversizedName.status, 400);

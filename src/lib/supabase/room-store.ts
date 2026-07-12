@@ -1,6 +1,6 @@
 import { normalizeAnswer } from "@/lib/text-normalize";
 import { roomCode } from "@/lib/room-code";
-import type { Card, Participant, Room, RoomStatus } from "@/types";
+import type { Card, Participant, Room, RoomStatus, Vote } from "@/types";
 import { getSupabaseServerClient } from "./server";
 
 const cardRanks = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -38,6 +38,7 @@ type DbRoom = {
   expires_at: string;
   participants?: DbParticipant[];
   cards?: DbCard[];
+  votes?: { room_id: string; participant_id: string; card_id: string; round_number: number }[];
 };
 
 export async function createRoom(hostSessionId: string) {
@@ -45,7 +46,7 @@ export async function createRoom(hostSessionId: string) {
   await write(client.rpc("cleanup_expired_rooms"));
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const code = roomCode();
-    const { data, error } = await client.from("rooms").insert({ room_code: code, host_session_id: hostSessionId }).select("*, participants(*), cards(*)").single();
+    const { data, error } = await client.from("rooms").insert({ room_code: code, host_session_id: hostSessionId }).select("*, participants(*), cards(*), votes(*)").single();
     if (!error) return toRoom(data as DbRoom);
     if (error.code !== "23505") unavailable();
   }
@@ -54,7 +55,7 @@ export async function createRoom(hostSessionId: string) {
 
 export async function getRoom(code: string) {
   const client = requiredClient();
-  const { data, error } = await client.from("rooms").select("*, participants(*), cards(*)").eq("room_code", code.toUpperCase()).maybeSingle();
+  const { data, error } = await client.from("rooms").select("*, participants(*), cards(*), votes(*)").eq("room_code", code.toUpperCase()).maybeSingle();
   if (error) unavailable();
   if (!data) return null;
   const room = toRoom(data as DbRoom);
@@ -109,6 +110,24 @@ export async function submitCard(code: string, sessionId: string, text: string) 
     text: clean,
     normalized_text: normalizeAnswer(clean),
   }));
+  await touchRoom(room.id);
+  return requiredRoom(code);
+}
+
+export async function voteForCard(code: string, sessionId: string, cardId: string) {
+  const client = requiredClient();
+  const room = await requiredRoom(code);
+  const participant = room.participants.find((item) => item.sessionId === sessionId);
+  if (!participant) throw new Error("Join room before voting.");
+  if (room.status !== "revealed") throw new Error("Voting opens after reveal.");
+  const card = room.cards.find((item) => item.id === cardId && item.roundNumber === room.roundNumber);
+  if (!card) throw new Error("Card is not in the current round.");
+  await write(client.from("votes").upsert({
+    room_id: room.id,
+    participant_id: participant.id,
+    card_id: card.id,
+    round_number: room.roundNumber,
+  }, { onConflict: "room_id,round_number,participant_id" }));
   await touchRoom(room.id);
   return requiredRoom(code);
 }
@@ -173,7 +192,12 @@ function toRoom(row: DbRoom): Room {
     expiresAt: row.expires_at,
     participants: (row.participants ?? []).map(toParticipant),
     cards: (row.cards ?? []).map(toCard),
+    votes: (row.votes ?? []).map(toVote),
   };
+}
+
+function toVote(row: NonNullable<DbRoom["votes"]>[number]): Vote {
+  return { roomId: row.room_id, participantId: row.participant_id, cardId: row.card_id, roundNumber: row.round_number };
 }
 
 function toParticipant(row: DbParticipant): Participant {

@@ -3,6 +3,7 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { MatchDeckLogo } from "@/components/matchdeck-logo";
 import { getSessionId } from "@/lib/session";
 
 export default function HomePage() {
@@ -37,7 +38,7 @@ export default function HomePage() {
   return (
     <main className="w-full max-w-full overflow-x-hidden text-[#f7f0d9]">
       <nav className="table-nav fixed top-4 z-40 flex items-center justify-between border border-[#f7d57a]/30 bg-[#21110d]/85 px-4 py-3 shadow-2xl backdrop-blur-xl">
-        <span className="font-display text-sm font-black uppercase tracking-[0.24em]">MatchDeck</span>
+        <MatchDeckLogo wordmark className="font-display text-sm font-black uppercase tracking-[0.16em]" />
         <button onClick={create} className="rounded-md bg-[#f7d57a] px-4 py-2 text-sm font-black text-[#19100d] transition-transform duration-300 hover:-translate-y-0.5">
           Create table
         </button>
@@ -113,9 +114,9 @@ function HomeTable() {
     <div className="casino-table-rail p-3 shadow-2xl">
       <div className="casino-felt min-h-[25rem] p-5 sm:min-h-[31rem]">
         <p className="text-center font-display text-xs font-black uppercase tracking-[0.24em] text-[#f7d57a]">MatchDeck table</p>
-        <div className="absolute left-[12%] top-[25%] h-[45%] w-[26%] rotate-[-10deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><span className="font-display text-2xl font-black text-[#f7d57a]">M</span></div></div>
-        <div className="absolute left-[38%] top-[18%] h-[49%] w-[29%] rotate-[5deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><span className="font-display text-2xl font-black text-[#f7d57a]">M</span></div></div>
-        <div className="absolute right-[10%] top-[31%] h-[42%] w-[25%] rotate-[13deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><span className="font-display text-2xl font-black text-[#f7d57a]">M</span></div></div>
+        <div className="absolute left-[12%] top-[25%] h-[45%] w-[26%] rotate-[-10deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="absolute left-[38%] top-[18%] h-[49%] w-[29%] rotate-[5deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="absolute right-[10%] top-[31%] h-[42%] w-[25%] rotate-[13deg] card-back shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
         <p className="absolute inset-x-6 bottom-6 text-center font-display text-2xl font-black text-[#f7f0d9]">Ideas on the felt.</p>
       </div>
     </div>

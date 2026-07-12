@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("host reveals a participant card", async ({ browser }) => {
+test("participants vote after reveal", async ({ browser }) => {
   const host = await browser.newContext();
   const hostPage = await host.newPage();
   await hostPage.goto("/");
@@ -24,7 +24,18 @@ test("host reveals a participant card", async ({ browser }) => {
   await expect(hostPage.getByRole("button", { name: "Reveal" })).toBeEnabled({ timeout: 10_000 });
   await hostPage.getByRole("button", { name: "Reveal" }).click();
   await expect(guestPage.getByLabel("All face-up cards on the table")).toContainText("Pizza", { timeout: 10_000 });
+  await guestPage.getByLabel("All face-up cards on the table").getByRole("button", { name: /Vote for Pizza; 0 votes/ }).click();
+  await expect(hostPage.getByLabel("All face-up cards on the table").getByRole("button", { name: /Vote for Pizza; 1 vote/ })).toBeVisible({ timeout: 10_000 });
 
+  const late = await browser.newContext();
+  const latePage = await late.newPage();
+  await latePage.goto(hostPage.url());
+  await latePage.getByLabel("Display name").fill("Late guest");
+  await latePage.getByRole("button", { name: "Take a seat" }).click();
+  await latePage.getByLabel("All face-up cards on the table").getByRole("button", { name: /Vote for Pizza; 1 vote/ }).click();
+  await expect(hostPage.getByLabel("All face-up cards on the table").getByRole("button", { name: /Vote for Pizza; 2 votes/ })).toBeVisible({ timeout: 10_000 });
+
+  await late.close();
   await guest.close();
   await host.close();
 });

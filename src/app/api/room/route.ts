@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     if (body.action === "join") return roomResponse(await roomStore().joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)), sessionId);
     if (body.action === "patch") return roomResponse(await roomStore().patchRoom(roomCode, sessionId, validPatch(body.patch)), sessionId);
     if (body.action === "submit") return roomResponse(await roomStore().submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)), sessionId);
+    if (body.action === "vote") return roomResponse(await roomStore().voteForCard(roomCode, sessionId, required(body.cardId, "Card", 64)), sessionId);
     return jsonError("Unknown action.", 400);
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Something went wrong.", 400);
@@ -81,15 +82,17 @@ function jsonError(message: string, status: number) {
 }
 
 function roomResponse(room: Room, viewerSessionId?: string) {
-  const { hostSessionId, participants, ...publicRoom } = room;
+  const { hostSessionId, participants, votes, ...publicRoom } = room;
   const viewer = participants.find((participant) => participant.sessionId === viewerSessionId);
+  const roundVotes = votes.filter((vote) => vote.roundNumber === room.roundNumber);
   const response: RoomView = {
     ...publicRoom,
     participants: participants.map(({ sessionId: _, ...participant }) => participant),
+    voteCounts: Object.fromEntries(room.cards.filter((card) => card.roundNumber === room.roundNumber).map((card) => [card.id, roundVotes.filter((vote) => vote.cardId === card.id).length])),
     cards: room.status === "revealed"
       ? room.cards
       : room.cards.map((card) => ({ ...card, text: "", normalizedText: "" })),
-    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId },
+    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId, votedCardId: roundVotes.find((vote) => vote.participantId === viewer?.id)?.cardId },
   };
   return NextResponse.json(response);
 }

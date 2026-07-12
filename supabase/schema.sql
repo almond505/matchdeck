@@ -33,6 +33,14 @@ create table cards (
   created_at timestamptz not null default now()
 );
 
+create table votes (
+  room_id uuid not null references rooms(id) on delete cascade,
+  participant_id uuid not null references participants(id) on delete cascade,
+  card_id uuid not null references cards(id) on delete cascade,
+  round_number integer not null,
+  primary key (room_id, round_number, participant_id)
+);
+
 create table card_submission_limits (
   room_id uuid not null references rooms(id) on delete cascade,
   session_id text not null,
@@ -44,6 +52,7 @@ create table card_submission_limits (
 create index idx_rooms_room_code on rooms(room_code);
 create index idx_participants_room_id on participants(room_id);
 create index idx_cards_room_round on cards(room_id, round_number);
+create index idx_votes_room_round on votes(room_id, round_number);
 
 create table room_events (
   room_id uuid primary key references rooms(id) on delete cascade,
@@ -54,6 +63,7 @@ create table room_events (
 alter table rooms enable row level security;
 alter table participants enable row level security;
 alter table cards enable row level security;
+alter table votes enable row level security;
 alter table card_submission_limits enable row level security;
 alter table room_events enable row level security;
 
@@ -140,10 +150,14 @@ create trigger room_events_from_cards
 after insert or update or delete on cards
 for each row execute function touch_room_event_from_child();
 
+create trigger room_events_from_votes
+after insert or update or delete on votes
+for each row execute function touch_room_event_from_child();
+
 alter publication supabase_realtime add table room_events;
 alter table room_events replica identity full;
 
 grant usage on schema public to anon, service_role;
-grant all on table rooms, participants, cards, card_submission_limits, room_events to service_role;
+grant all on table rooms, participants, cards, votes, card_submission_limits, room_events to service_role;
 grant select on table room_events to anon;
 grant execute on function consume_card_submission(uuid, text) to service_role;

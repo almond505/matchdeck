@@ -45,6 +45,7 @@ export function createRoom(hostSessionId: string) {
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     participants: [],
     cards: [],
+    votes: [],
   };
   rooms.set(code, room);
   return publicRoom(room);
@@ -111,6 +112,19 @@ export function submitCard(code: string, sessionId: string, text: string) {
   };
   room.cards.push(card);
   room.updatedAt = card.createdAt;
+  return publicRoom(room);
+}
+
+export function voteForCard(code: string, sessionId: string, cardId: string) {
+  const room = mustRoom(code);
+  const participant = room.participants.find((item) => item.sessionId === sessionId);
+  if (!participant) throw new Error("Join room before voting.");
+  if (room.status !== "revealed") throw new Error("Voting opens after reveal.");
+  const card = room.cards.find((item) => item.id === cardId && item.roundNumber === room.roundNumber);
+  if (!card) throw new Error("Card is not in the current round.");
+  room.votes = room.votes.filter((vote) => vote.participantId !== participant.id || vote.roundNumber !== room.roundNumber);
+  room.votes.push({ roomId: room.id, participantId: participant.id, cardId: card.id, roundNumber: room.roundNumber });
+  room.updatedAt = now();
   return publicRoom(room);
 }
 

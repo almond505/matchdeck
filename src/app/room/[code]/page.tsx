@@ -7,6 +7,7 @@ import { Check, Copy, FoldVertical, RefreshCw, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MatchDeckLogo } from "@/components/matchdeck-logo";
 import { groupCards } from "@/lib/grouping";
 import { getSavedName, getSessionId, saveName } from "@/lib/session";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -148,7 +149,7 @@ export default function RoomPage() {
               <p className="font-display text-sm font-black uppercase tracking-[0.24em] text-[#f7d57a]">Table {code}</p>
               <h1 className="mt-4 max-w-xl font-display text-5xl font-black leading-[0.92] text-[#f7f0d9]">Put your name at the table.</h1>
               <label className="mt-9 block text-sm font-bold text-[#e8d8ad]" htmlFor="name">Display name</label>
-              <input id="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 min-h-14 w-full rounded-lg border-2 border-[#311a13] bg-[#f7f0d9] px-4 text-lg font-black text-[#19100d] outline-none ring-offset-2 focus:ring-2 focus:ring-[#f7d57a]" placeholder="Almond" />
+              <input id="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 min-h-14 w-full rounded-lg border-2 border-[#311a13] bg-[#f7f0d9] px-4 text-lg font-black text-[#19100d] outline-none ring-offset-2 focus:ring-2 focus:ring-[#f7d57a]" placeholder="Your name" />
               <button
                 onClick={() => {
                   saveName(name);
@@ -195,7 +196,7 @@ export default function RoomPage() {
               </div>
             ) : room.status === "revealed" ? (
               <div className="reveal-table-grid mt-5" aria-label="All face-up cards on the table">
-                {cardsWithPeople.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
+                {cardsWithPeople.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} votes={room.voteCounts[card.id]} selected={room.viewer.votedCardId === card.id} onVote={() => act({ action: "vote", cardId: card.id })} />)}
                 {cardsWithPeople.length === 0 && <p className="col-span-full grid min-h-44 place-items-center text-center font-bold text-[#e8d8ad]">No cards were dealt this round.</p>}
               </div>
             ) : (
@@ -254,7 +255,7 @@ export default function RoomPage() {
                       <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
                     </div>
                     <div className="match-card-grid mt-5">
-                      {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
+                      {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} votes={room.voteCounts[card.id]} selected={room.viewer.votedCardId === card.id} onVote={() => act({ action: "vote", cardId: card.id })} />)}
                     </div>
                   </div>
                 </motion.article>
@@ -290,7 +291,7 @@ function Shell({ code, children }: { code: string; children: React.ReactNode }) 
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden text-[#f7f0d9]">
       <nav className="table-nav fixed top-4 z-40 flex items-center justify-between border border-[#f7d57a]/30 bg-[#21110d]/85 px-4 py-3 shadow-2xl backdrop-blur-xl">
-        <a href="/" className="font-display font-black uppercase tracking-[0.16em] text-[#f7f0d9]">MatchDeck</a>
+        <a href="/" className="font-display font-black uppercase tracking-[0.12em] text-[#f7f0d9]"><MatchDeckLogo wordmark /></a>
         <span className="bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{code}</span>
       </nav>
       {children}
@@ -317,22 +318,27 @@ function CardBack({ index }: { index: number }) {
   return (
     <article className="card-back aspect-[5/7] min-w-0 shadow-xl transition-transform duration-500 hover:z-10 hover:scale-105" style={{ transform: `rotate(${rotations[index % rotations.length]}deg)` }} aria-label={`Folded card ${index + 1}`}>
       <div className="card-back-inner grid h-full place-items-center">
-        <span className="font-display text-xl font-black tracking-[0.2em] text-[#f7d57a]">M</span>
+        <MatchDeckLogo className="text-[#f7d57a]" />
       </div>
     </article>
   );
 }
 
-function PlayingCard({ text, card }: { text: string; card: PublicParticipant }) {
-  return (
-    <article className="playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl">
-      <CardCorners card={card} />
-      <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
-        <div>
-          <p className="break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
-        </div>
+function PlayingCard({ text, card, votes, selected, onVote }: { text: string; card: PublicParticipant; votes?: number; selected?: boolean; onVote?: () => void }) {
+  const voteCount = votes ?? 0;
+  const className = `playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl ${selected ? "ring-4 ring-[#f7d57a] ring-offset-2 ring-offset-[#164d32]" : ""}`;
+  const contents = <>
+    <CardCorners card={card} />
+    <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
+      <div>
+        <p className="break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
+        {onVote && <p className="mt-4 text-sm font-black uppercase tracking-wide">{selected ? "Your vote" : "Vote"} · {voteCount}</p>}
       </div>
-    </article>
+    </div>
+  </>;
+  if (onVote) return <button type="button" onClick={onVote} aria-pressed={selected} aria-label={`Vote for ${text}; ${voteCount} ${voteCount === 1 ? "vote" : "votes"}`} className={`${className} text-left transition-transform hover:-translate-y-1 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]`}>{contents}</button>;
+  return (
+    <article className={className}>{contents}</article>
   );
 }
 
