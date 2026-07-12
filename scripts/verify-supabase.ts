@@ -41,6 +41,9 @@ function waitForSubscription(channel: ReturnType<typeof realtime.channel>) {
 }
 
 async function verify() {
+  const { error: cleanupError } = await admin.rpc("cleanup_expired_rooms");
+  if (cleanupError) throw new Error(cleanupError.message);
+
   const { data: room, error: createError } = await admin
     .from("rooms")
     .insert({ host_session_id: randomUUID(), room_code: roomCode() })
