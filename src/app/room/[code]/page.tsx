@@ -342,7 +342,7 @@ function PlayingCard({ text, card }: { text: string; card: PublicParticipant }) 
     <CardCorners card={card} />
     <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
       <div>
-        <p className="break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
+        <p className="min-w-0 break-all font-display text-[clamp(1rem,5vw,1.875rem)] font-black leading-none">{text}</p>
       </div>
     </div>
   </>;
