@@ -303,7 +303,7 @@ function Shell({ code, children }: { code: string; children: React.ReactNode }) 
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden text-[#f7f0d9]">
       <nav className="table-nav fixed top-4 z-40 flex items-center justify-between border border-[#f7d57a]/30 bg-[#21110d]/85 px-4 py-3 shadow-2xl backdrop-blur-xl">
-        <a href="/" className="font-display font-black uppercase tracking-[0.12em] text-[#f7f0d9]"><MatchDeckLogo wordmark /></a>
+        <a href="/" className="text-2xl tracking-tight"><MatchDeckLogo wordmark /></a>
         <span className="bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{code}</span>
       </nav>
       {children}
@@ -330,7 +330,7 @@ function CardBack({ index }: { index: number }) {
   return (
     <article className="card-back aspect-[5/7] min-w-0 shadow-xl transition-transform duration-500 hover:z-10 hover:scale-105" style={{ transform: `rotate(${rotations[index % rotations.length]}deg)` }} aria-label={`Folded card ${index + 1}`}>
       <div className="card-back-inner grid h-full place-items-center">
-        <MatchDeckLogo className="text-[#f7d57a]" />
+        <MatchDeckLogo className="text-[10px]" wordmark stacked />
       </div>
     </article>
   );

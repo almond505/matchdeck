@@ -38,7 +38,7 @@ export default function HomePage() {
   return (
     <main className="w-full max-w-full overflow-x-hidden text-[#f7f0d9]">
       <nav className="table-nav fixed top-4 z-40 flex items-center justify-between border border-[#f7d57a]/30 bg-[#21110d]/85 px-4 py-3 shadow-2xl backdrop-blur-xl">
-        <MatchDeckLogo wordmark className="font-display text-sm font-black uppercase tracking-[0.16em]" />
+        <MatchDeckLogo wordmark className="text-2xl tracking-tight" />
         <button onClick={create} className="rounded-md bg-[#f7d57a] px-4 py-2 text-sm font-black text-[#19100d] transition-transform duration-300 hover:-translate-y-0.5">
           Create table
         </button>
@@ -114,9 +114,9 @@ function HomeTable() {
     <div className="casino-table-rail p-3 shadow-2xl">
       <div className="casino-felt min-h-[25rem] p-5 sm:min-h-[31rem]">
         <p className="text-center font-display text-xs font-black uppercase tracking-[0.24em] text-[#f7d57a]">MatchDeck table</p>
-        <div className="card-back absolute left-[12%] top-[25%] aspect-[5/7] w-[26%] rotate-[-10deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
-        <div className="card-back absolute left-[38%] top-[18%] aspect-[5/7] w-[29%] rotate-[5deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
-        <div className="card-back absolute right-[10%] top-[31%] aspect-[5/7] w-[25%] rotate-[13deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[#f7d57a]" /></div></div>
+        <div className="card-back absolute left-[12%] top-[25%] aspect-[5/7] w-[26%] rotate-[-10deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[10px]" wordmark stacked /></div></div>
+        <div className="card-back absolute left-[38%] top-[18%] aspect-[5/7] w-[29%] rotate-[5deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[10px]" wordmark stacked /></div></div>
+        <div className="card-back absolute right-[10%] top-[31%] aspect-[5/7] w-[25%] rotate-[13deg] shadow-2xl"><div className="card-back-inner grid h-full place-items-center"><MatchDeckLogo className="text-[10px]" wordmark stacked /></div></div>
         <p className="absolute inset-x-6 bottom-6 text-center font-display text-2xl font-black text-[#f7f0d9]">Ideas on the felt.</p>
       </div>
     </div>
