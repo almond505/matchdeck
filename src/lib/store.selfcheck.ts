@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { createRoom, getRoom, joinRoom, patchRoom, submitCard, voteForCard } from "./store";
+import { groupRoundCards } from "./room-groups";
+import { createRoom, getRoom, joinRoom, patchRoom, submitCard, voteForGroup } from "./store";
 
 const room = createRoom("host-unlimited");
 joinRoom(room.roomCode, "host-unlimited", "Host");
@@ -10,11 +11,22 @@ const updated = submitCard(room.roomCode, "host-unlimited", "Sushi");
 assert.equal(updated.cards.length, 2);
 
 patchRoom(room.roomCode, "host-unlimited", { status: "revealed" });
-assert.equal(voteForCard(room.roomCode, "host-unlimited", updated.cards[0].id).votes[0].cardId, updated.cards[0].id);
-assert.equal(voteForCard(room.roomCode, "host-unlimited", updated.cards[1].id).votes[0].cardId, updated.cards[1].id);
-assert.throws(() => voteForCard(room.roomCode, "stranger", updated.cards[0].id), /Join room before voting/);
+assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[0].id).votes[0].groupId, updated.cards[0].id);
+assert.equal(voteForGroup(room.roomCode, "host-unlimited", updated.cards[1].id).votes[0].groupId, updated.cards[1].id);
+assert.throws(() => voteForGroup(room.roomCode, "stranger", updated.cards[0].id), /Join room before voting/);
 patchRoom(room.roomCode, "host-unlimited", { newRound: true });
-assert.throws(() => voteForCard(room.roomCode, "host-unlimited", updated.cards[0].id), /Voting opens after reveal/);
+assert.throws(() => voteForGroup(room.roomCode, "host-unlimited", updated.cards[0].id), /Voting opens after reveal/);
+
+const groupedRoom = createRoom("host-grouped");
+joinRoom(groupedRoom.roomCode, "host-grouped", "Host");
+joinRoom(groupedRoom.roomCode, "guest-grouped", "Guest");
+patchRoom(groupedRoom.roomCode, "host-grouped", { prompt: "Dinner?", status: "writing" });
+submitCard(groupedRoom.roomCode, "host-grouped", "Pizza");
+submitCard(groupedRoom.roomCode, "guest-grouped", "Pizzas");
+patchRoom(groupedRoom.roomCode, "host-grouped", { status: "revealed" });
+const grouped = groupRoundCards(getRoom(groupedRoom.roomCode)!)[0];
+assert.equal(grouped.cards.length, 2);
+assert.equal(voteForGroup(groupedRoom.roomCode, "guest-grouped", grouped.id).votes[0].groupId, grouped.id);
 
 const identityRoom = createRoom("host-identities");
 const firstIdentity = joinRoom(identityRoom.roomCode, "host-identities", "First");

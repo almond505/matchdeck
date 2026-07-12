@@ -1,5 +1,6 @@
 import { roomCode } from "./room-code";
 import { normalizeAnswer } from "./text-normalize";
+import { groupRoundCards } from "./room-groups";
 import type { Card, Participant, Room, RoomStatus } from "@/types";
 
 const cardRanks = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -115,15 +116,14 @@ export function submitCard(code: string, sessionId: string, text: string) {
   return publicRoom(room);
 }
 
-export function voteForCard(code: string, sessionId: string, cardId: string) {
+export function voteForGroup(code: string, sessionId: string, groupId: string) {
   const room = mustRoom(code);
   const participant = room.participants.find((item) => item.sessionId === sessionId);
   if (!participant) throw new Error("Join room before voting.");
   if (room.status !== "revealed") throw new Error("Voting opens after reveal.");
-  const card = room.cards.find((item) => item.id === cardId && item.roundNumber === room.roundNumber);
-  if (!card) throw new Error("Card is not in the current round.");
+  if (!groupRoundCards(room).some((group) => group.id === groupId)) throw new Error("Group is not in the current round.");
   room.votes = room.votes.filter((vote) => vote.participantId !== participant.id || vote.roundNumber !== room.roundNumber);
-  room.votes.push({ roomId: room.id, participantId: participant.id, cardId: card.id, roundNumber: room.roundNumber });
+  room.votes.push({ roomId: room.id, participantId: participant.id, groupId, roundNumber: room.roundNumber });
   room.updatedAt = now();
   return publicRoom(room);
 }

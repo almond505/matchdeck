@@ -34,16 +34,18 @@ export function similarity(a: string, b: string) {
 export function groupCards(cards: CardWithParticipant[]): CardGroup[] {
   const groups: CardGroup[] = [];
 
-  for (const card of cards) {
+  for (const card of [...cards].sort((a, b) => a.id.localeCompare(b.id))) {
     const label = normalizeAnswer(card.text);
     const group = groups.find((item) => similarity(item.label, label) >= SIMILARITY_THRESHOLD);
     if (group) {
       group.cards.push(card);
       group.isExactMatch &&= group.label === label;
     } else {
-      groups.push({ id: label || card.id, label: label || "untitled", cards: [card], isExactMatch: true });
+      groups.push({ id: card.id, label: label || "untitled", cards: [card], isExactMatch: true });
     }
   }
 
-  return groups.sort((a, b) => b.cards.length - a.cards.length || a.label.localeCompare(b.label));
+  return groups
+    .map((group) => ({ ...group, id: group.cards.map((card) => card.id).sort().join(":") }))
+    .sort((a, b) => b.cards.length - a.cards.length || a.label.localeCompare(b.label));
 }

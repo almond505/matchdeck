@@ -1,4 +1,5 @@
 import { normalizeAnswer } from "@/lib/text-normalize";
+import { groupRoundCards } from "@/lib/room-groups";
 import { roomCode } from "@/lib/room-code";
 import type { Card, Participant, Room, RoomStatus, Vote } from "@/types";
 import { getSupabaseServerClient } from "./server";
@@ -38,7 +39,7 @@ type DbRoom = {
   expires_at: string;
   participants?: DbParticipant[];
   cards?: DbCard[];
-  votes?: { room_id: string; participant_id: string; card_id: string; round_number: number }[];
+  votes?: { room_id: string; participant_id: string; group_id: string; round_number: number }[];
 };
 
 export async function createRoom(hostSessionId: string) {
@@ -114,18 +115,19 @@ export async function submitCard(code: string, sessionId: string, text: string) 
   return requiredRoom(code);
 }
 
-export async function voteForCard(code: string, sessionId: string, cardId: string) {
+export async function voteForGroup(code: string, sessionId: string, groupId: string) {
   const client = requiredClient();
   const room = await requiredRoom(code);
   const participant = room.participants.find((item) => item.sessionId === sessionId);
   if (!participant) throw new Error("Join room before voting.");
   if (room.status !== "revealed") throw new Error("Voting opens after reveal.");
-  const card = room.cards.find((item) => item.id === cardId && item.roundNumber === room.roundNumber);
-  if (!card) throw new Error("Card is not in the current round.");
+  const group = groupRoundCards(room).find((item) => item.id === groupId);
+  if (!group) throw new Error("Group is not in the current round.");
   await write(client.from("votes").upsert({
     room_id: room.id,
     participant_id: participant.id,
-    card_id: card.id,
+    card_id: group.cards[0].id,
+    group_id: group.id,
     round_number: room.roundNumber,
   }, { onConflict: "room_id,round_number,participant_id" }));
   await touchRoom(room.id);
@@ -197,7 +199,7 @@ function toRoom(row: DbRoom): Room {
 }
 
 function toVote(row: NonNullable<DbRoom["votes"]>[number]): Vote {
-  return { roomId: row.room_id, participantId: row.participant_id, cardId: row.card_id, roundNumber: row.round_number };
+  return { roomId: row.room_id, participantId: row.participant_id, groupId: row.group_id, roundNumber: row.round_number };
 }
 
 function toParticipant(row: DbParticipant): Participant {

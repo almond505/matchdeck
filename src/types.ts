@@ -25,7 +25,7 @@ export type Card = {
 export type Vote = {
   roomId: string;
   participantId: string;
-  cardId: string;
+  groupId: string;
   roundNumber: number;
 };
 
@@ -47,7 +47,7 @@ export type Room = {
 export type RoomView = Omit<Room, "hostSessionId" | "participants" | "votes"> & {
   participants: PublicParticipant[];
   voteCounts: Record<string, number>;
-  viewer: { participantId?: string; isHost: boolean; votedCardId?: string };
+  viewer: { participantId?: string; isHost: boolean; votedGroupId?: string };
 };
 
 export type CardWithParticipant = Card & {

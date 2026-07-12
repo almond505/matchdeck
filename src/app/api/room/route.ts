@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as memoryStore from "@/lib/store";
 import * as supabaseStore from "@/lib/supabase/room-store";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { groupRoundCards } from "@/lib/room-groups";
 import type { Room, RoomStatus, RoomView } from "@/types";
 
 const ROOM_STATUSES: RoomStatus[] = ["waiting", "writing", "revealed"];
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     if (body.action === "join") return roomResponse(await roomStore().joinRoom(roomCode, sessionId, required(body.displayName, "Name", MAX.name)), sessionId);
     if (body.action === "patch") return roomResponse(await roomStore().patchRoom(roomCode, sessionId, validPatch(body.patch)), sessionId);
     if (body.action === "submit") return roomResponse(await roomStore().submitCard(roomCode, sessionId, required(body.text, "Answer", MAX.card)), sessionId);
-    if (body.action === "vote") return roomResponse(await roomStore().voteForCard(roomCode, sessionId, required(body.cardId, "Card", 64)), sessionId);
+    if (body.action === "vote") return roomResponse(await roomStore().voteForGroup(roomCode, sessionId, required(body.groupId, "Group", 800)), sessionId);
     return jsonError("Unknown action.", 400);
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Something went wrong.", 400);
@@ -85,14 +86,15 @@ function roomResponse(room: Room, viewerSessionId?: string) {
   const { hostSessionId, participants, votes, ...publicRoom } = room;
   const viewer = participants.find((participant) => participant.sessionId === viewerSessionId);
   const roundVotes = votes.filter((vote) => vote.roundNumber === room.roundNumber);
+  const groups = groupRoundCards(room);
   const response: RoomView = {
     ...publicRoom,
     participants: participants.map(({ sessionId: _, ...participant }) => participant),
-    voteCounts: Object.fromEntries(room.cards.filter((card) => card.roundNumber === room.roundNumber).map((card) => [card.id, roundVotes.filter((vote) => vote.cardId === card.id).length])),
+    voteCounts: Object.fromEntries(groups.map((group) => [group.id, roundVotes.filter((vote) => vote.groupId === group.id).length])),
     cards: room.status === "revealed"
       ? room.cards
       : room.cards.map((card) => ({ ...card, text: "", normalizedText: "" })),
-    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId, votedCardId: roundVotes.find((vote) => vote.participantId === viewer?.id)?.cardId },
+    viewer: { participantId: viewer?.id, isHost: hostSessionId === viewerSessionId, votedGroupId: roundVotes.find((vote) => vote.participantId === viewer?.id)?.groupId },
   };
   return NextResponse.json(response);
 }

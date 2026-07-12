@@ -37,6 +37,7 @@ create table votes (
   room_id uuid not null references rooms(id) on delete cascade,
   participant_id uuid not null references participants(id) on delete cascade,
   card_id uuid not null references cards(id) on delete cascade,
+  group_id text not null,
   round_number integer not null,
   primary key (room_id, round_number, participant_id)
 );

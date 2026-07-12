@@ -196,7 +196,7 @@ export default function RoomPage() {
               </div>
             ) : room.status === "revealed" ? (
               <div className="reveal-table-grid mt-5" aria-label="All face-up cards on the table">
-                {cardsWithPeople.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} votes={room.voteCounts[card.id]} selected={room.viewer.votedCardId === card.id} onVote={() => act({ action: "vote", cardId: card.id })} />)}
+                {cardsWithPeople.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
                 {cardsWithPeople.length === 0 && <p className="col-span-full grid min-h-44 place-items-center text-center font-bold text-[#e8d8ad]">No cards were dealt this round.</p>}
               </div>
             ) : (
@@ -252,10 +252,13 @@ export default function RoomPage() {
                   <div className="casino-felt min-w-0 p-5 sm:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="font-display text-3xl font-black capitalize text-[#f7f0d9]">{group.label}</h3>
-                      <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-[#f7d57a] px-3 py-1 text-sm font-black text-[#19100d]">{group.cards.length} cards</span>
+                        <button type="button" onClick={() => act({ action: "vote", groupId: group.id })} aria-label={`Vote for ${group.label} group; ${room.voteCounts[group.id] ?? 0} ${(room.voteCounts[group.id] ?? 0) === 1 ? "vote" : "votes"}`} aria-pressed={room.viewer.votedGroupId === group.id} className="min-h-10 rounded-lg border border-[#f7d57a]/45 bg-[#24120e]/80 px-3 text-sm font-black text-[#f7f0d9] transition-colors hover:bg-[#3a1b13] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]">{room.viewer.votedGroupId === group.id ? "Your vote" : "Vote"} · {room.voteCounts[group.id] ?? 0}</button>
+                      </div>
                     </div>
                     <div className="match-card-grid mt-5">
-                      {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} votes={room.voteCounts[card.id]} selected={room.viewer.votedCardId === card.id} onVote={() => act({ action: "vote", cardId: card.id })} />)}
+                      {group.cards.map((card) => <PlayingCard key={card.id} text={card.text} card={card.participant} />)}
                     </div>
                   </div>
                 </motion.article>
@@ -324,19 +327,16 @@ function CardBack({ index }: { index: number }) {
   );
 }
 
-function PlayingCard({ text, card, votes, selected, onVote }: { text: string; card: PublicParticipant; votes?: number; selected?: boolean; onVote?: () => void }) {
-  const voteCount = votes ?? 0;
-  const className = `playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl ${selected ? "ring-4 ring-[#f7d57a] ring-offset-2 ring-offset-[#164d32]" : ""}`;
+function PlayingCard({ text, card }: { text: string; card: PublicParticipant }) {
+  const className = "playing-card relative aspect-[5/7] min-w-0 p-3 text-[#19100d] shadow-xl";
   const contents = <>
     <CardCorners card={card} />
     <div className="grid h-full place-items-center rounded-md border border-[#19100d]/15 bg-[radial-gradient(circle_at_center,rgba(247,213,122,.3),transparent_48%)] px-3 text-center">
       <div>
         <p className="break-words font-display text-2xl font-black leading-none sm:text-3xl">{text}</p>
-        {onVote && <p className="mt-4 text-sm font-black uppercase tracking-wide">{selected ? "Your vote" : "Vote"} · {voteCount}</p>}
       </div>
     </div>
   </>;
-  if (onVote) return <button type="button" onClick={onVote} aria-pressed={selected} aria-label={`Vote for ${text}; ${voteCount} ${voteCount === 1 ? "vote" : "votes"}`} className={`${className} text-left transition-transform hover:-translate-y-1 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f7d57a]`}>{contents}</button>;
   return (
     <article className={className}>{contents}</article>
   );
