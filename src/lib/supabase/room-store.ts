@@ -46,7 +46,7 @@ export async function createRoom(hostSessionId: string) {
   await write(client.rpc("cleanup_expired_rooms"));
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const code = roomCode();
-    const { data, error } = await client.from("rooms").insert({ room_code: code, host_session_id: hostSessionId }).select("*, participants(*), cards(*), votes(*)").single();
+    const { data, error } = await client.from("rooms").insert({ room_code: code, host_session_id: hostSessionId }).select("*, participants!participants_room_id_fkey(*), cards!cards_room_id_fkey(*), votes!votes_room_id_fkey(*)").single();
     if (!error) return toRoom(data as DbRoom);
     if (error.code !== "23505") unavailable();
   }
@@ -55,7 +55,7 @@ export async function createRoom(hostSessionId: string) {
 
 export async function getRoom(code: string) {
   const client = requiredClient();
-  const { data, error } = await client.from("rooms").select("*, participants(*), cards(*), votes(*)").eq("room_code", code.toUpperCase()).maybeSingle();
+  const { data, error } = await client.from("rooms").select("*, participants!participants_room_id_fkey(*), cards!cards_room_id_fkey(*), votes!votes_room_id_fkey(*)").eq("room_code", code.toUpperCase()).maybeSingle();
   if (error) unavailable();
   if (!data) return null;
   const room = toRoom(data as DbRoom);

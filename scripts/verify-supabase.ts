@@ -44,7 +44,7 @@ async function verify() {
   const { data: room, error: createError } = await admin
     .from("rooms")
     .insert({ host_session_id: randomUUID(), room_code: roomCode() })
-    .select("id, room_code")
+    .select("*, participants!participants_room_id_fkey(*), cards!cards_room_id_fkey(*), votes!votes_room_id_fkey(*)")
     .single();
   if (createError || !room) throw new Error(createError?.message ?? "Could not create verification room.");
 
